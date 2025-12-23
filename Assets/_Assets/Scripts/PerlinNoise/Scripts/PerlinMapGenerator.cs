@@ -278,9 +278,9 @@ namespace ProceduralGeneration
                     noiseMap = Noise.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset, noiseSettings.pow);
                     break;
                 case NoiseMode.PoissonDiscSampling:
-                    noiseMap = PoissonDicsSampling.ConvertToGrid(
-                        PoissonDicsSampling.GeneratePoints(additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight),30)
-                    ,additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight)); 
+                    // noiseMap = PoissonDicsSampling.ConvertToGrid(
+                    //     PoissonDicsSampling.GeneratePoints(additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight),30)
+                    // ,additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight)); 
                     break;
             }
 

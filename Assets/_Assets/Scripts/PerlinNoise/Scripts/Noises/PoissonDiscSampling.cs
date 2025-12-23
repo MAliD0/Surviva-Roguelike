@@ -1,15 +1,27 @@
+using System.Collections;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
-public static class PoissonDicsSampling
+public class PoissonDicsSampling: MonoBehaviour
 {
-    public static List<Vector2> GeneratePoints(
-        float radius,
-        Vector2 sampleRegionSize,
-        int numSamplesBeforeRejection = 30)
-    {
-        float cellSize = radius / Mathf.Sqrt(2);
 
+    [Header("Settings:")]
+    [FoldoutGroup("Settings")] [SerializeField] public float radius = 1f;
+    [FoldoutGroup("Settings")] [SerializeField] public Vector2 sampleRegionSize;
+    [FoldoutGroup("Settings")] [SerializeField] public int numSamplesBeforeRejection = 30;
+    [FoldoutGroup("Settings")] [SerializeField] public float cellSize = 8;
+
+    [SerializeField] List<Vector2> points;
+
+    [Button("Generate Points")]
+    public void GeneratePointsButton()
+    {
+        points = GeneratePoints(cellSize,radius, sampleRegionSize, numSamplesBeforeRejection);
+        Debug.Log("Generated Points: " + points.Count);
+    }
+    public static List<Vector2> GeneratePoints(float cellSize, float radius, Vector2 sampleRegionSize, int numSamplesBeforeRejection = 30)
+    {
         int gridWidth  = Mathf.CeilToInt(sampleRegionSize.x / cellSize);
         int gridHeight = Mathf.CeilToInt(sampleRegionSize.y / cellSize);
 
@@ -25,6 +37,8 @@ public static class PoissonDicsSampling
 
         // start at world center (0,0)
         spawnPoints.Add(Vector2.zero);
+
+        int breaker = 0;
 
         while (spawnPoints.Count > 0)
         {
@@ -56,18 +70,22 @@ public static class PoissonDicsSampling
 
             if (!accepted)
                 spawnPoints.RemoveAt(spawnIndex);
+
+            breaker++;
+            if (breaker > 1000000)
+                break;
         }
 
         return points;
     }
 
-    static bool IsValid(
-        Vector2 candidate,
-        Vector2 sampleRegionSize,
-        float cellSize,
-        float radius,
-        List<Vector2> points,
-        int[,] grid)
+    public static List<Vector2> GeneratePoints(float radius, Vector2 sampleRegionSize, int numSamplesBeforeRejection = 30)
+    {
+        float cellSize = radius / Mathf.Sqrt(2);
+        return GeneratePoints(cellSize, radius, sampleRegionSize, numSamplesBeforeRejection);
+    }
+
+    static bool IsValid(Vector2 candidate, Vector2 sampleRegionSize, float cellSize, float radius, List<Vector2> points, int[,] grid)
     {
         Vector2 half = sampleRegionSize / 2f;
 
@@ -105,10 +123,7 @@ public static class PoissonDicsSampling
     // CONVERSION: List<Vector2> → float[,]
     // Coordinates are in world space (-half..+half), grid will be centered.
     // -----------------------------------------------------------------------
-    public static float[,] ConvertToGrid(
-        List<Vector2> points,
-        float radius,
-        Vector2 sampleRegionSize)
+    public static float[,] ConvertToGrid(List<Vector2> points, float radius, Vector2 sampleRegionSize)
     {
         float cellSize = radius / Mathf.Sqrt(2);
         Vector2 half = sampleRegionSize / 2f;
@@ -130,4 +145,26 @@ public static class PoissonDicsSampling
 
         return grid;
     }
+
+    void OnDrawGizmos()
+    {
+        for (float x = -sampleRegionSize.x / 2f; x <= sampleRegionSize.x / 2f; x += 1)
+        {
+            Gizmos.DrawLine(new Vector3(x, -sampleRegionSize.y / 2f, 0), new Vector3(x, sampleRegionSize.y / 2f, 0));
+        }
+        for (float y = -sampleRegionSize.y / 2f; y <= sampleRegionSize.y / 2f; y += 1)
+        {
+            Gizmos.DrawLine(new Vector3(-sampleRegionSize.x / 2f, y, 0), new Vector3(sampleRegionSize.x / 2f, y, 0));
+        }
+
+        if (points != null)
+        {
+            Gizmos.color = Color.red;
+            foreach (var p in points)
+            {
+                Gizmos.DrawSphere(new Vector3(p.x, p.y, 0), 1f);
+            }
+        }       
+    }
+
 }
