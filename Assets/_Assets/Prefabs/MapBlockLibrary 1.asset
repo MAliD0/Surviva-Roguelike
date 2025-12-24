@@ -34,3 +34,7 @@ MonoBehaviour:
       Value: {fileID: 11400000, guid: 6951b1831ae3f974eaba6615448e65a8, type: 2}
     - Key: WorkBench
       Value: {fileID: 11400000, guid: 0dedb88db8ba1e64d8fe438d150ec389, type: 2}
+    - Key: Furnace
+      Value: {fileID: 11400000, guid: c7f495022fc4a0845b86aaa711b1d2a8, type: 2}
+    - Key: Rock
+      Value: {fileID: 11400000, guid: 8271f014247d35b42b5538f0793abfda, type: 2}

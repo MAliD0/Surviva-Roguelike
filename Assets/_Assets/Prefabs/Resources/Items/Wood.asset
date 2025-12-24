@@ -12,7 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: baf10ec35a3f7cb45b58334dc0455a2f, type: 3}
   m_Name: Wood
   m_EditorClassIdentifier: 
-  itemIcon: {fileID: -1817448995, guid: 9cccce7131510e148b751bb463ddfa98, type: 3}
+  itemIcon: {fileID: 976252184, guid: e98ce7ad3be13e94bb50828be9256ca1, type: 3}
   itemType: 2
   isStackable: 1
   maxStack: 24
+  isCraftable: 0
+  recipeItems: []
+  craftAmount: 1

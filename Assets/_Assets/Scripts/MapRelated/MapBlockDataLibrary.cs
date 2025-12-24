@@ -7,7 +7,7 @@ using Sirenix.OdinInspector;
 [CreateAssetMenu(fileName ="MapBlockLibrary", menuName = "Map/BlockLibrary")]
 public class MapBlockDataLibrary : ScriptableObject
 {
-    public SerializedDictionary<string, MapBlockData> dataLibrary;
+    [ReadOnly][SerializeField] SerializedDictionary<string, MapBlockData> dataLibrary;
 
     [Button("Generate Library")]
     public void GenerateLibrary()
@@ -23,6 +23,18 @@ public class MapBlockDataLibrary : ScriptableObject
             {
                 Debug.LogWarning($"Item {asset.GetItemID()} already has instance");
             }
+        }
+    }
+
+    public void AddData(MapBlockData mapBlockData)
+    {
+        if (!dataLibrary.ContainsKey(mapBlockData.GetItemID()))
+        {
+            dataLibrary.Add(mapBlockData.GetItemID(), mapBlockData);
+        }
+        else
+        {
+            Debug.LogWarning($"Item {mapBlockData.GetItemID()} already has instance");
         }
     }
 

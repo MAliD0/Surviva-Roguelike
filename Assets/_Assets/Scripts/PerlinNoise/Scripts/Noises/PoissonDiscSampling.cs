@@ -11,16 +11,17 @@ public class PoissonDicsSampling: MonoBehaviour
     [FoldoutGroup("Settings")] [SerializeField] public Vector2 sampleRegionSize;
     [FoldoutGroup("Settings")] [SerializeField] public int numSamplesBeforeRejection = 30;
     [FoldoutGroup("Settings")] [SerializeField] public float cellSize = 8;
+    [FoldoutGroup("Settings")] [SerializeField] public int maxPoints = -1;
 
     [SerializeField] List<Vector2> points;
 
     [Button("Generate Points")]
     public void GeneratePointsButton()
     {
-        points = GeneratePoints(cellSize,radius, sampleRegionSize, numSamplesBeforeRejection);
+        points = GeneratePoints(cellSize,radius, sampleRegionSize, numSamplesBeforeRejection, maxPoints);
         Debug.Log("Generated Points: " + points.Count);
     }
-    public static List<Vector2> GeneratePoints(float cellSize, float radius, Vector2 sampleRegionSize, int numSamplesBeforeRejection = 30)
+    public static List<Vector2> GeneratePoints(float cellSize, float radius, Vector2 sampleRegionSize, int numSamplesBeforeRejection = 30, int maxPoints = -1)
     {
         int gridWidth  = Mathf.CeilToInt(sampleRegionSize.x / cellSize);
         int gridHeight = Mathf.CeilToInt(sampleRegionSize.y / cellSize);
@@ -37,8 +38,6 @@ public class PoissonDicsSampling: MonoBehaviour
 
         // start at world center (0,0)
         spawnPoints.Add(Vector2.zero);
-
-        int breaker = 0;
 
         while (spawnPoints.Count > 0)
         {
@@ -70,19 +69,18 @@ public class PoissonDicsSampling: MonoBehaviour
 
             if (!accepted)
                 spawnPoints.RemoveAt(spawnIndex);
-
-            breaker++;
-            if (breaker > 1000000)
+            
+            if (maxPoints != -1 && points.Count >= maxPoints)
                 break;
         }
 
         return points;
     }
 
-    public static List<Vector2> GeneratePoints(float radius, Vector2 sampleRegionSize, int numSamplesBeforeRejection = 30)
+    public static List<Vector2> GeneratePoints(float radius, Vector2 sampleRegionSize, int numSamplesBeforeRejection = 30, int maxPoints = -1)
     {
         float cellSize = radius / Mathf.Sqrt(2);
-        return GeneratePoints(cellSize, radius, sampleRegionSize, numSamplesBeforeRejection);
+        return GeneratePoints(cellSize, radius, sampleRegionSize, numSamplesBeforeRejection, maxPoints);
     }
 
     static bool IsValid(Vector2 candidate, Vector2 sampleRegionSize, float cellSize, float radius, List<Vector2> points, int[,] grid)
@@ -145,6 +143,12 @@ public class PoissonDicsSampling: MonoBehaviour
 
         return grid;
     }
+
+    // public static float[,] GenerateNoiseMap(float cellSize, float radius, Vector2 sampleRegionSize, int numSamplesBeforeRejection = 30, int maxPoints = -1)
+    // {
+    //     List<Vector2> points = GeneratePoints(cellSize, radius, sampleRegionSize, numSamplesBeforeRejection, maxPoints);
+    //     return ConvertToGrid(points, radius, sampleRegionSize);
+    // }
 
     void OnDrawGizmos()
     {

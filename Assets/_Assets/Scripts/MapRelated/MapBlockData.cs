@@ -79,8 +79,8 @@ public enum MapBlockType
 }
 public enum MapLayerType
 {
-    waterGround,
-    backGround,//a earth tiles
-    wallGround,//on a wall
-    foreGround//on a earth
+    onBoatGround,
+    backGround,
+    boatGround,
+    foreGround
 }

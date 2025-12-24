@@ -5,7 +5,7 @@ using UnityEngine;
     
 public class ItemLibrary : ScriptableObject
 {
-    public SerializedDictionary<string, ItemData> dataLibrary;
+    [ReadOnly][SerializeField] SerializedDictionary<string, ItemData> dataLibrary;
 
     [Button("Generate Library")]
     public void GenerateLibrary()
@@ -20,6 +20,32 @@ public class ItemLibrary : ScriptableObject
             else
             {
                 Debug.LogWarning($"Item {asset.GetItemID()} already has instance");
+            }
+        }
+        OnUpdate();
+    }
+
+    public void AddData(ItemData itemData)
+    {
+        if (!dataLibrary.ContainsKey(itemData.GetItemID()))
+        {
+            dataLibrary.Add(itemData.GetItemID(), itemData);
+        }
+        else
+        {
+            Debug.LogWarning($"Item {itemData.GetItemID()} already has instance");
+        }
+        OnUpdate();
+    }
+
+    private void OnUpdate()
+    {
+        foreach (var item in dataLibrary)
+        {
+            if(item.Value == null)
+            {
+                dataLibrary.Remove(item.Key);
+                break;
             }
         }
     }

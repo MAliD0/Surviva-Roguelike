@@ -184,8 +184,8 @@ public class MapSnapshotSync : NetworkBehaviour
 
         AddLayer(MapLayerType.backGround, world.GetLayer(MapLayerType.backGround));
         AddLayer(MapLayerType.foreGround, world.GetLayer(MapLayerType.foreGround));
-        AddLayer(MapLayerType.wallGround, world.GetLayer(MapLayerType.wallGround));
-        AddLayer(MapLayerType.waterGround, world.GetLayer(MapLayerType.waterGround));
+        AddLayer(MapLayerType.boatGround, world.GetLayer(MapLayerType.boatGround));
+        AddLayer(MapLayerType.onBoatGround, world.GetLayer(MapLayerType.onBoatGround));
         return result;
     }
 

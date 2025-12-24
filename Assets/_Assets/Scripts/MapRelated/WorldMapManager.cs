@@ -4,12 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
+using UnityEditor;
 using UnityEngine;
 
 /// <summary>
 /// Единственный авторитет по сети: валидирует правила мира, кладёт/удаляет тайлы в слои,
 /// спавнит/деспавнит сетевые GO, рассылает RPC для не-сетевых, держит серверный реестр.
 /// </summary>
+
+[ExecuteAlways]
 public class WorldMapManager : NetworkBehaviour
 {
     [Header("Settings")]
@@ -29,12 +32,12 @@ public class WorldMapManager : NetworkBehaviour
     [FoldoutGroup("Layer References")][SerializeField] private MapLayerLogic foreLayer;
 
     [Header("Wall Layer")]
-    [FoldoutGroup("Layer References")][SerializeField] private MapLayerGraphics wallLayerGraphics;
-    [FoldoutGroup("Layer References")][SerializeField] private MapLayerLogic wallLayer;
+    [FoldoutGroup("Layer References")][SerializeField] private MapLayerGraphics boatLayerGraphics;
+    [FoldoutGroup("Layer References")][SerializeField] private MapLayerLogic boatLayer;
 
     [FoldoutGroup("Layer References")][Header("Water Layer")]
-    [FoldoutGroup("Layer References")][SerializeField] private MapLayerGraphics waterLayerGraphics;
-    [FoldoutGroup("Layer References")][SerializeField] private MapLayerLogic waterLayer;
+    [FoldoutGroup("Layer References")][SerializeField] private MapLayerGraphics onBoatLayerGraphics;
+    [FoldoutGroup("Layer References")][SerializeField] private MapLayerLogic onBoatLayer;
 
     public static WorldMapManager Instance { get; private set; }
 
@@ -72,42 +75,119 @@ public class WorldMapManager : NetworkBehaviour
 
     private void Awake() => Instance = this;
 
-    private void Start()
+     private void Start()
     {
         // Инициализируем слои данных
         baseLayer = new MapLayerLogic(new MapBounds(minX,maxX,minY,maxY , false));
         foreLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
-        waterLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+        onBoatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
 
         // Инициализируем графику
         baseLayerGraphics.Init(baseLayer);
         foreLayerGraphics.Init(foreLayer);
-        waterLayerGraphics.Init(waterLayer);
+        onBoatLayerGraphics.Init(onBoatLayer);
 
         _netlessRegistry = new SerializedDictionary<string, NetlessEntry>();
         _anchorToNetId = new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, ulong>>>(); 
             
-
-        ConnectionManager.instance.onServerActivate += (x) =>
+        if(ConnectionManager.instance != null)
         {
-            // Подписки на события слоёв — ТОЛЬКО на сервере
-            if (IsServer)
+            ConnectionManager.instance.onServerActivate += (x) =>
             {
-                print("Enter");
-                baseLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.backGround, cells, data);
-                foreLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.foreGround, cells, data);
-                waterLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.waterGround, cells, data);
+                // Подписки на события слоёв — ТОЛЬКО на сервере
+                if (IsServer)
+                {
+                    print("Enter");
+                    baseLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.backGround, cells, data);
+                    foreLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.foreGround, cells, data);
+                    onBoatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.onBoatGround, cells, data);
 
-                baseLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.backGround, cells, type);
-                foreLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.foreGround, cells, type);
-                waterLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.waterGround, cells, type);
+                    baseLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.backGround, cells, type);
+                    foreLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.foreGround, cells, type);
+                    onBoatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.onBoatGround, cells, type);
 
-                // Для снапшотов нетворк-лесс при позднем коннекте
-                NetworkManager.OnClientConnectedCallback += OnClientConnectedServer;
-            }
-        };
+                    // Для снапшотов нетворк-лесс при позднем коннекте
+                    NetworkManager.OnClientConnectedCallback += OnClientConnectedServer;
+                }
+            };
+        }
+
+
+
+        if(!ConnectionManager.instance.isActiveAndEnabled)
+        {
+            ForTestingWorldGeneration();
+        }
     }
+    #region TestingWorldGeneration
+    private void SpawnNetless(MapLayerType layer, string itemId, DictEntry[] occupiedTiles, Vector3 pos, string id)
+    {
+        var prefab = blockLibrary.GetMapBlockData(itemId)?.gameObject;
+        if (!prefab) { Debug.LogError($"[SpawnNetless] нет префаба {itemId}"); return; }
 
+        Dictionary<Vector2Int, HashSet<Vector2Int>> tiles = DictEntry.DictEntryToDictionary(occupiedTiles.ToList());
+
+        var go = Instantiate(prefab, pos, Quaternion.identity);
+
+        //onObjectInstantiated?.Invoke(go, anchor, itemId, id);
+        foreach(Vector2Int anchor in tiles.Keys)
+        {
+            GetGraphics(layer).BindObject(anchor, tiles[anchor].ToList(), go, id);
+        }
+    }
+    private void ForTestingWorldGeneration()
+    {
+        baseLayer = new MapLayerLogic(new MapBounds(minX,maxX,minY,maxY , false));
+        foreLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+        onBoatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+
+        // Инициализируем графику
+        baseLayerGraphics.Init(baseLayer);
+        foreLayerGraphics.Init(foreLayer);
+        onBoatLayerGraphics.Init(onBoatLayer);
+
+        _netlessRegistry = new SerializedDictionary<string, NetlessEntry>();
+        _anchorToNetId = new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, ulong>>>(); 
+
+        baseLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.backGround, cells, data);
+        foreLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.foreGround, cells, data);
+        onBoatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.onBoatGround, cells, data);
+
+        baseLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.backGround, cells, type);
+        foreLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.foreGround, cells, type);
+        onBoatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.onBoatGround, cells, type);
+    }
+    public void initiateForTesting()
+    {
+        ForTestingWorldGeneration();
+    }
+    public void ClearAllLayers()
+    {
+        onBoatLayerGraphics.ClearTilemap();
+        baseLayerGraphics.ClearTilemap();
+        foreLayerGraphics.ClearTilemap();
+        boatLayerGraphics.ClearTilemap();
+
+        onBoatLayer.LayerTiles.Clear();
+        baseLayer.LayerTiles.Clear();
+        foreLayer.LayerTiles.Clear();
+        boatLayer.LayerTiles.Clear();
+
+        onBoatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+        baseLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+        foreLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+        boatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+    }
+    private void BindObjectByNetId(DictEntry[] serializedTiles, GameObject go, MapLayerType layer, ClientRpcParams rpcParams = default)
+    {
+        Dictionary<Vector2Int, HashSet<Vector2Int>> tiles = DictEntry.DictEntryToDictionary(serializedTiles.ToList());
+
+        foreach(Vector2Int anchor in tiles.Keys)
+        {
+            GetGraphics(layer).BindObject(anchor, tiles[anchor].ToList(), go, null);    
+        }
+    }
+    #endregion
     // ============ Публичные команды (клиент → сервер) ============
 
     public bool CheckIfPlacementIsPossible(Vector2 pos, string mapBlockDataId)
@@ -127,7 +207,7 @@ public class WorldMapManager : NetworkBehaviour
                 return false;
             }
         }
-        if (data.mapLayerType == MapLayerType.waterGround && baseLayer.IsTilePresented(pos))
+        if (data.mapLayerType == MapLayerType.onBoatGround && baseLayer.IsTilePresented(pos))
         {
             Debug.LogWarning($"[Rules] Water на занятый BackGround {pos}");
             return false;
@@ -170,6 +250,34 @@ public class WorldMapManager : NetworkBehaviour
         }
     }
 
+    //For testing purpose only
+    public void SetTile(Vector2 pos, MapBlockData data)
+    {
+        if (data == null) return;
+
+        // Правила мира (межслойные проверки)
+        var targetLayer = GetLayer(data.mapLayerType);
+        if (targetLayer == null) { Debug.LogError("[SetTile] targetLayer null"); return; }
+
+        // Доп. правила (пример)
+        if (data.mapLayerType == MapLayerType.foreGround)
+        {
+            if (!baseLayer.IsTilePresented(pos))
+            {
+                Debug.LogWarning($"[Rules] ForeGround без BackGround на {pos}");
+                return;
+            }
+        }
+        if (data.mapLayerType == MapLayerType.onBoatGround && baseLayer.IsTilePresented(pos))
+        {
+            Debug.LogWarning($"[Rules] Water на занятый BackGround {pos}");
+            return;
+        }
+
+        // Пишем на СЕРВЕРЕ в слой данных (вызывает OnServer_TilePlaced)
+        if (!targetLayer.PlaceBlock(pos, data)) return;
+    }
+
 
     [ServerRpc(RequireOwnership = false)]
     public void SetTileRequestServerRpc(Vector2 pos, string mapBlockDataId)
@@ -194,7 +302,7 @@ public class WorldMapManager : NetworkBehaviour
         var targetLayer = GetLayer(data.mapLayerType);
         if (targetLayer == null) { Debug.LogError("[SetTile] targetLayer null"); return; }
 
-        // Доп. правила (пример)
+        // Доп. правила
         if (data.mapLayerType == MapLayerType.foreGround)
         {
             if (!baseLayer.IsTilePresented(pos))
@@ -202,21 +310,8 @@ public class WorldMapManager : NetworkBehaviour
                 Debug.LogWarning($"[Rules] ForeGround без BackGround на {pos}");
                 return;
             }
-
-            if (data.isMultiblock)
-                {
-                    //foreach (var off in data.tileOffsets)
-                    //{
-                    //    var cell = pos + off;
-                    //    if (!baseLayer.IsTilePresented(cell))
-                    //    {
-                    //        Debug.LogWarning($"[Rules] ForeGround без BackGround на {cell}");
-                    //        return;
-                    //    }
-                    //}
-                }
         }
-        if (data.mapLayerType == MapLayerType.waterGround && baseLayer.IsTilePresented(pos))
+        if (data.mapLayerType == MapLayerType.onBoatGround && baseLayer.IsTilePresented(pos))
         {
             Debug.LogWarning($"[Rules] Water на занятый BackGround {pos}");
             return;
@@ -238,8 +333,8 @@ public class WorldMapManager : NetworkBehaviour
 
         if (foreLayer.IsSubTilePresented(tile, subtile)) { layer = foreLayer; layerType = MapLayerType.foreGround; }
         else if (baseLayer.IsSubTilePresented(tile, subtile)) { layer = baseLayer; layerType = MapLayerType.backGround; }
-        else if (wallLayer.IsSubTilePresented(tile, subtile)) { layer = wallLayer; layerType = MapLayerType.wallGround; }
-        else if (waterLayer.IsSubTilePresented(tile, subtile)) { layer = waterLayer; layerType = MapLayerType.waterGround; }
+        else if (boatLayer.IsSubTilePresented(tile, subtile)) { layer = boatLayer; layerType = MapLayerType.boatGround; }
+        else if (onBoatLayer.IsSubTilePresented(tile, subtile)) { layer = onBoatLayer; layerType = MapLayerType.onBoatGround; }
 
         if (layer == null) return;
 
@@ -266,10 +361,8 @@ public class WorldMapManager : NetworkBehaviour
 
         Vector2 worldPos = layerLogic.SubtileToWorldPosition(occupiedTiles[0], anchorSubTile);
 
-        
         //this line is under the question
         //var worldPos = new Vector3(occupiedTile.x + 0.5f, occupiedTile.y + 0.5f, 0f);
-
         var prefab = blockLibrary.GetMapBlockData(data.GetItemID())?.gameObject;
 
         if (!prefab)
@@ -293,6 +386,11 @@ public class WorldMapManager : NetworkBehaviour
             if(!dictNet[anchor].ContainsKey(anchorSubTile)) dictNet[anchor].Add(anchorSubTile, no.NetworkObjectId);
             else dictNet[anchor][anchorSubTile] = no.NetworkObjectId;
 
+            if(ConnectionManager.instance == null || !ConnectionManager.instance.isActiveAndEnabled)
+            {
+                BindObjectByNetId(DictEntry.SerializeDictionary(cells).ToArray(), go, layer);
+                return;
+            }
             // Биндинг на клиентах по netId (чтобы графика знала cell->GO)
             BindObjectByNetIdClientRpc(DictEntry.SerializeDictionary(cells).ToArray(), no.NetworkObjectId, layer);
         }
@@ -318,6 +416,12 @@ public class WorldMapManager : NetworkBehaviour
                 itemId = data.GetItemID(),
                 pos = worldPos
             };
+            
+            if(ConnectionManager.instance == null || !ConnectionManager.instance.isActiveAndEnabled)
+            {
+                SpawnNetless(layer, data.GetItemID(), DictEntry.SerializeDictionary(cells).ToArray(), worldPos, id);
+                return;
+            }
             
             SpawnNetlessClientRpc(layer, data.GetItemID(), DictEntry.SerializeDictionary(cells).ToArray(), worldPos, id);
         }
@@ -474,10 +578,6 @@ public class WorldMapManager : NetworkBehaviour
             var e = kv.Value;
             SpawnNetlessClientRpc(e.layer, e.itemId, e.occupiedTiles.ToArray(), e.pos, kv.Key, ConnectionManager.instance.SendAllExceptHost());
         }
-
-        // Актуализируем тайлы: пробежать все слои и переслать, если требуется.
-        // Если клиенты уже в курсе (через поздний join), можно опустить.
-        // Здесь оставлено минималистично.
     }
 
 
@@ -487,8 +587,8 @@ public class WorldMapManager : NetworkBehaviour
     {
         MapLayerType.backGround => baseLayer,
         MapLayerType.foreGround => foreLayer,
-        MapLayerType.wallGround => wallLayer,
-        MapLayerType.waterGround => waterLayer,
+        MapLayerType.boatGround => boatLayer,
+        MapLayerType.onBoatGround => onBoatLayer,
         _ => null
     };
 
@@ -496,8 +596,8 @@ public class WorldMapManager : NetworkBehaviour
     {
         MapLayerType.backGround => baseLayerGraphics,
         MapLayerType.foreGround => foreLayerGraphics,
-        MapLayerType.wallGround => wallLayerGraphics,
-        MapLayerType.waterGround => waterLayerGraphics,
+        MapLayerType.boatGround => boatLayerGraphics,
+        MapLayerType.onBoatGround => onBoatLayerGraphics,
         _ => baseLayerGraphics
     };
 
@@ -507,15 +607,17 @@ public class WorldMapManager : NetworkBehaviour
 
         if (foreLayer.IsTilePresented(pos)) {  layerType = MapLayerType.foreGround; }
         else if (baseLayer.IsTilePresented(pos)) {  layerType = MapLayerType.backGround; }
-        else if (wallLayer.IsTilePresented(pos)) { layerType = MapLayerType.wallGround; }
-        else if (waterLayer.IsTilePresented(pos)) { layerType = MapLayerType.waterGround; }
+        else if (onBoatLayer.IsTilePresented(pos)) { layerType = MapLayerType.onBoatGround; }
+        else if (boatLayer.IsTilePresented(pos)) { layerType = MapLayerType.boatGround; }
         return layerType;
     }
 
     // ============ Сервис ============
 
+
+
     [Button]
-    public void ClearTilemaps()
+    public void ClearTilemapsForServer()
     {
         foreach(var item in _anchorToNetId)
         {
@@ -532,14 +634,14 @@ public class WorldMapManager : NetworkBehaviour
     [ClientRpc]
     private void ClearTilemapsClientRpc()
     {
-        waterLayerGraphics.ClearTilemap();
+        onBoatLayerGraphics.ClearTilemap();
         baseLayerGraphics.ClearTilemap();
         foreLayerGraphics.ClearTilemap();
-        //wallLayerGraphics.ClearTilemap();
+        boatLayerGraphics.ClearTilemap();
 
-        waterLayer.LayerTiles.Clear();
+        onBoatLayer.LayerTiles.Clear();
         baseLayer.LayerTiles.Clear();
+        boatLayer.LayerTiles.Clear();
         foreLayer.LayerTiles.Clear();
-        //wallLayer.LayerTiles.Clear();
     }
 }

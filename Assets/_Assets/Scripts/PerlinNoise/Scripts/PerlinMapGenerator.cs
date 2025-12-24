@@ -108,7 +108,7 @@ namespace ProceduralGeneration
         [Button]
         public void GenerateMap()
         {
-            float[,] noiseMap = Noise.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset);
+            float[,] noiseMap = PerlinNoiseGenerator.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset, 1.0f);
             Color[] colourMap = new Color[noiseSettings.mapWidth * noiseSettings.mapHeight];
 
             mapDisplay.DisablePlane(false);
@@ -130,7 +130,7 @@ namespace ProceduralGeneration
                     noiseMap = Noise.GenerateOrganicVoronoi(noiseSettings, pointsNumber);
                     break;
                 case NoiseMode.ScaledPerlin:
-                    noiseMap = Noise.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset, noiseSettings.pow);
+                    noiseMap = PerlinNoiseGenerator.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset, noiseSettings.pow);
                     break;
             }
 
@@ -170,7 +170,7 @@ namespace ProceduralGeneration
                 case DrawMode.TileMap:
                     mapDisplay.DisablePlane(true);
                     
-                    worldMapManager.ClearTilemaps();
+                    worldMapManager.ClearTilemapsForServer();
 
                     var tilePositions = new List<Vector3Int>();
                     var tilePosition = new Vector3Int();
@@ -202,8 +202,8 @@ namespace ProceduralGeneration
 
                     break;
                 case DrawMode.BiomsGeneration:
-                    float[,] moistureNoiseMap = Noise.GenerateNoiseMap(moistureNoiseSettings.mapWidth, moistureNoiseSettings.mapHeight, seed, moistureNoiseSettings.scale, moistureNoiseSettings.octaves, moistureNoiseSettings.persistance, moistureNoiseSettings.lacunarity, moistureNoiseSettings.offset);
-                    float[,] temperatureNoiseMap = Noise.GenerateNoiseMap(temperatureNoiseSettings.mapWidth, temperatureNoiseSettings.mapHeight, seed, temperatureNoiseSettings.scale, temperatureNoiseSettings.octaves, temperatureNoiseSettings.persistance, temperatureNoiseSettings.lacunarity, temperatureNoiseSettings.offset);
+                    float[,] moistureNoiseMap = PerlinNoiseGenerator.GenerateNoiseMap(moistureNoiseSettings.mapWidth, moistureNoiseSettings.mapHeight, seed, moistureNoiseSettings.scale, moistureNoiseSettings.octaves, moistureNoiseSettings.persistance, moistureNoiseSettings.lacunarity, moistureNoiseSettings.offset);
+                    float[,] temperatureNoiseMap = PerlinNoiseGenerator.GenerateNoiseMap(temperatureNoiseSettings.mapWidth, temperatureNoiseSettings.mapHeight, seed, temperatureNoiseSettings.scale, temperatureNoiseSettings.octaves, temperatureNoiseSettings.persistance, temperatureNoiseSettings.lacunarity, temperatureNoiseSettings.offset);
 
                     TerrainType[,] biomes = new TerrainType[noiseSettings.mapWidth, noiseSettings.mapHeight];
 
@@ -260,28 +260,19 @@ namespace ProceduralGeneration
             NoiseMode noiseMode = additionalGeneratingObject.noiseMode;
             NoiseSettings noiseSettings = additionalGeneratingObject.noiseSettings;
 
-            float[,] noiseMap = Noise.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset);
+            //float[,] noiseMap = PerlinNoiseGenerator.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset);
+
+            float[,] noiseMap = new float[noiseSettings.mapWidth, noiseSettings.mapHeight];
 
             switch (noiseMode)
             {
-                case NoiseMode.IslandMap:
-                    noiseMap = Noise.IslandNoise(noiseSettings, noiseMap, additionalGeneratingObject.radius, additionalGeneratingObject.strength);
-                    mapDisplay.DrawTexture(TextureGenerator.TextureFromHeightMap(noiseMap));
-                    break;
-                case NoiseMode.PerlinWorm:
-                    noiseMap = Noise.PerlinWorm(noiseSettings, noiseMap, minTrashold);
-                    break;
-                case NoiseMode.WorleyNoise:
-                    noiseMap = Noise.GenerateOrganicVoronoi(noiseSettings, pointsNumber);
-                    break;
-                case NoiseMode.ScaledPerlin:
-                    noiseMap = Noise.GenerateNoiseMap(noiseSettings.mapWidth, noiseSettings.mapHeight, seed, noiseSettings.scale, noiseSettings.octaves, noiseSettings.persistance, noiseSettings.lacunarity, noiseSettings.offset, noiseSettings.pow);
-                    break;
                 case NoiseMode.PoissonDiscSampling:
-                    // noiseMap = PoissonDicsSampling.ConvertToGrid(
-                    //     PoissonDicsSampling.GeneratePoints(additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight),30)
-                    // ,additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight)); 
-                    break;
+                    List<Vector2> points = PoissonDicsSampling.GeneratePoints(8, additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight), 30);
+                    foreach (var p in points)
+                    {
+                        worldMapManager.SetTileRequestServerRpc(p, additionalGeneratingObject.mapBlockData.GetItemID());
+                    }
+                    return;
             }
 
             switch (drawMode)

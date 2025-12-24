@@ -12,7 +12,7 @@ using System.Linq;
 /// НИКАКОЙ сетевой логики здесь нет.
 /// </summary>
 
-[Serializable]
+[ExecuteAlways]
 public class MapLayerGraphics : NetworkBehaviour
 {
     private MapLayerLogic layerLogic;
@@ -201,13 +201,19 @@ public class MapLayerGraphics : NetworkBehaviour
         Destroy(go);
     }
 
-
-
     [Button]
     public void ClearTilemap()
     {
         LayerVisualsTiles.ClearAllTiles();
-
+        if (!Application.isPlaying)
+        {
+            foreach (var kv in _netlessById)
+                if (kv.Value) DestroyImmediate(kv.Value);
+            
+            _netlessById.Clear();
+            CellToGO.Clear();
+            return;
+        }
         // очистка кэшей и уничтожение не-сетевых GO
         foreach (var kv in _netlessById)
             if (kv.Value) Destroy(kv.Value);
