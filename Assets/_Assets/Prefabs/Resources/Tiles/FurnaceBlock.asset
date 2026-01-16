@@ -25,6 +25,7 @@ MonoBehaviour:
   mapLayerType: 3
   isMultiblock: 1
   breakable: 1
+  gridAligned: 1
   maxHealth: 5
   blockSize: {x: 7, y: 6}
   tileOffsets: []

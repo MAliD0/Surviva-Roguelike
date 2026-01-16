@@ -335,7 +335,7 @@ public class MapLayerLogic
         Vector2Int anchor = tileIndex;
         Vector2Int subTile = subtileIndex;
 
-        Dictionary<Vector2Int, HashSet<Vector2Int>> group;
+        Dictionary<Vector2Int, HashSet<Vector2Int>> group = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
 
         switch (data.mapBlockType)
         {
@@ -344,7 +344,6 @@ public class MapLayerLogic
                 subTile = new Vector2Int(0, 0); //for tile subtileAnchor is always 0,0
 
                 List<Vector2Int> cells = new List<Vector2Int> { tileIndex };
-                group = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
 
                 foreach (var cell in cells)
                 {
@@ -365,19 +364,51 @@ public class MapLayerLogic
                 if (data.breakable)
                     onTileHealthChanged?.Invoke(tileIndex, subtileIndex, data, GetHealth(tileIndex, group[tileIndex].First()), data.maxHealth);
             break;
-            default:         // subtile/multisubtile placement (non-tile)
-                group = GetFootprintCellLocalPairs(tileIndex, subtileIndex, data.blockSize.x, data.blockSize.y, anchorIsTopLeft: false);
-
-                foreach (Vector2Int tile in group.Keys)
+            case MapBlockType.GameObject:// subtile/multisubtile placement (non-tile)
+                
+                if (data.gridAligned)
                 {
-                    if (!LayerTiles.ContainsKey(tile)) LayerTiles.Add(tile, new SerializedDictionary<Vector2Int, MapTile>());
+                    subTile = new Vector2Int(0, 0); //for tile subtileAnchor is always 0,0
 
-                    foreach (Vector2Int tileCell in group[tile])
+                    cells = new List<Vector2Int> { tileIndex };
+                    group = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
+
+                    foreach (var cell in cells)
                     {
-                        if (LayerTiles[tile].ContainsKey(tileCell)) continue;
-                        LayerTiles[tile].Add(tileCell, new MapTile(tileCell, data, tile, subtileIndex, anchor));
+                        if (!LayerTiles.ContainsKey(cell)) LayerTiles.Add(cell, new SerializedDictionary<Vector2Int, MapTile>());
+
+                        var set = new HashSet<Vector2Int>();
+                        for (int lx = 0; lx < SubtilesPerCell; lx++)
+                        for (int ly = 0; ly < SubtilesPerCell; ly++)
+                        {
+                            var local = new Vector2Int(lx, ly);
+                            if (LayerTiles[cell].ContainsKey(local)) continue;
+                            LayerTiles[cell].Add(local, new MapTile(local, data, cell, subTile, anchor));//for tile subtileAnchor is always 0,0
+                                set.Add(local);
+                        }
+                        group[cell] = set;
+
+                    }
+                    if (data.breakable)
+                        onTileHealthChanged?.Invoke(tileIndex, subtileIndex, data, GetHealth(tileIndex, group[tileIndex].First()), data.maxHealth);
+
+                }
+                else
+                {
+                    group = GetFootprintCellLocalPairs(tileIndex, subtileIndex, data.blockSize.x, data.blockSize.y, anchorIsTopLeft: false);
+
+                    foreach (Vector2Int tile in group.Keys)
+                    {
+                        if (!LayerTiles.ContainsKey(tile)) LayerTiles.Add(tile, new SerializedDictionary<Vector2Int, MapTile>());
+
+                        foreach (Vector2Int tileCell in group[tile])
+                        {
+                            if (LayerTiles[tile].ContainsKey(tileCell)) continue;
+                            LayerTiles[tile].Add(tileCell, new MapTile(tileCell, data, tile, subtileIndex, anchor));
+                        }
                     }
                 }
+
             break;
         }
 

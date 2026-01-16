@@ -38,13 +38,10 @@ public class WorldMapGenerator : MonoBehaviour
         int zeroX = zeroCoordinates.x;
         int zeroY = zeroCoordinates.y;
 
-        if(width % 2 != 0) width += 1;
-        if(height % 2 != 0) height += 1;
-
         int minX = zeroX - (width / 2);
         int maxX = zeroX + (width / 2);
 
-        int minY = zeroY - (height / 2);
+        int minY = zeroY + (height / 2);
         int maxY = zeroY + (height / 2);
 
         for (int x = minX; x < maxX; x++)

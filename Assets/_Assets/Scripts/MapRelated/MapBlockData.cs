@@ -15,11 +15,12 @@ public class MapBlockData : ItemData
 
     [ShowIf("mapBlockType", MapBlockType.GameObject)]
     public GameObject gameObject;
-
     public MapLayerType mapLayerType;
 
     [FoldoutGroup("Settings")]public bool isMultiblock = true;
     [FoldoutGroup("Settings")]public bool breakable;
+    [FoldoutGroup("Settings")]public bool gridAligned = false;
+
     [FoldoutGroup("Settings")]
     [ShowIf("breakable")]
     public int maxHealth;

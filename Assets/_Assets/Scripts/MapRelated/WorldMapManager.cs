@@ -80,11 +80,13 @@ public class WorldMapManager : NetworkBehaviour
         // Инициализируем слои данных
         baseLayer = new MapLayerLogic(new MapBounds(minX,maxX,minY,maxY , false));
         foreLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+        boatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
         onBoatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
 
         // Инициализируем графику
         baseLayerGraphics.Init(baseLayer);
         foreLayerGraphics.Init(foreLayer);
+        boatLayerGraphics.Init(boatLayer);
         onBoatLayerGraphics.Init(onBoatLayer);
 
         _netlessRegistry = new SerializedDictionary<string, NetlessEntry>();
@@ -100,10 +102,12 @@ public class WorldMapManager : NetworkBehaviour
                     print("Enter");
                     baseLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.backGround, cells, data);
                     foreLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.foreGround, cells, data);
+                    boatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.boatGround, cells, data);
                     onBoatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.onBoatGround, cells, data);
 
                     baseLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.backGround, cells, type);
                     foreLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.foreGround, cells, type);
+                    boatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.boatGround, cells, type);
                     onBoatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.onBoatGround, cells, type);
 
                     // Для снапшотов нетворк-лесс при позднем коннекте
@@ -139,11 +143,13 @@ public class WorldMapManager : NetworkBehaviour
     {
         baseLayer = new MapLayerLogic(new MapBounds(minX,maxX,minY,maxY , false));
         foreLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
+        boatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
         onBoatLayer = new MapLayerLogic(new MapBounds(minX, maxX, minY, maxY, false));
 
         // Инициализируем графику
         baseLayerGraphics.Init(baseLayer);
         foreLayerGraphics.Init(foreLayer);
+        boatLayerGraphics.Init(boatLayer);
         onBoatLayerGraphics.Init(onBoatLayer);
 
         _netlessRegistry = new SerializedDictionary<string, NetlessEntry>();
@@ -151,10 +157,12 @@ public class WorldMapManager : NetworkBehaviour
 
         baseLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.backGround, cells, data);
         foreLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.foreGround, cells, data);
+        boatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.boatGround, cells, data);
         onBoatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.onBoatGround, cells, data);
 
         baseLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.backGround, cells, type);
         foreLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.foreGround, cells, type);
+        boatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.boatGround, cells, type);
         onBoatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.onBoatGround, cells, type);
     }
     public void initiateForTesting()
