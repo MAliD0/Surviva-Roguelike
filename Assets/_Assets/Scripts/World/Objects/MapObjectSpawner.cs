@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Unity.Netcode;
 
 public class MapObjectSpawner
 {
@@ -118,5 +119,78 @@ public class MapObjectSpawner
         }
 
         return false;
+    }
+
+    public MapObjectSpawnResult SpawnPlacedObjectOnline(
+        MapLayerType layerType,
+        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
+        MapBlockData blockData
+    )
+    {
+        if (blockData == null)
+            return MapObjectSpawnResult.Fail("BlockData is null.");
+
+        if (!TryGetPlacedAnchor(layerType, cells, out Vector2Int tileAnchor, out Vector2Int subtileAnchor))
+            return MapObjectSpawnResult.Fail("Could not find placed anchor.");
+
+        MapLayerLogic layer = getLayer?.Invoke(layerType);
+
+        if (layer == null)
+            return MapObjectSpawnResult.Fail($"Layer is missing: {layerType}");
+
+        Vector2 worldPosition = layer.SubtileToWorldPosition(tileAnchor, subtileAnchor);
+
+        GameObject prefab = blockLibrary
+            .GetMapBlockData(blockData.GetItemID())
+            ?.gameObject;
+
+        if (prefab == null)
+            return MapObjectSpawnResult.Fail($"Prefab id={blockData.GetItemID()} not found.");
+
+        string itemId = blockData.GetItemID();
+
+        if (prefab.TryGetComponent<NetworkObject>(out _))
+        {
+            GameObject go = UnityEngine.Object.Instantiate(
+                prefab,
+                worldPosition,
+                Quaternion.identity
+            );
+
+            NetworkObject networkObject = go.GetComponent<NetworkObject>();
+            networkObject.Spawn();
+
+            registry.RegisterNetworkObject(
+                layerType,
+                cells,
+                networkObject.NetworkObjectId
+            );
+
+            return MapObjectSpawnResult.NetworkObject(
+                layerType,
+                cells,
+                networkObject.NetworkObjectId,
+                itemId,
+                worldPosition
+            );
+        }
+
+        string id = newId.Invoke();
+
+        registry.RegisterNetlessObject(
+            layerType,
+            cells,
+            id,
+            itemId,
+            worldPosition
+        );
+
+        return MapObjectSpawnResult.NetlessObject(
+            layerType,
+            cells,
+            id,
+            itemId,
+            worldPosition
+        );
     }
 }

@@ -107,10 +107,12 @@ public class WorldMapManager : NetworkBehaviour
     {
         CreateLayers();
         InitGraphics();
+
         InitObjectRegistry();
+        InitObjectSpawner();
+
         InitPlacementValidator();
         InitWorldMapService();
-        InitObjectSpawner();
 
         if (runMode == WorldMapRunMode.Offline)
         {
@@ -120,7 +122,7 @@ public class WorldMapManager : NetworkBehaviour
 
         if (ConnectionManager.instance != null)
         {
-            ConnectionManager.instance.onServerActivate += (x)=>{ OnServerActivated(true); };
+            ConnectionManager.instance.onServerActivate += OnServerActivateEvent;
         }
 
         if (IsOnlineMode && IsServer)
@@ -136,11 +138,12 @@ public class WorldMapManager : NetworkBehaviour
     }
 
 
-
     private void OnDestroy()
     {
+        UnsubscribeAuthoritativeLayerEvents();
+
         if (ConnectionManager.instance != null)
-            ConnectionManager.instance.onServerActivate -= (x)=> {OnServerActivated(true);};
+            ConnectionManager.instance.onServerActivate -= OnServerActivateEvent;
 
         if (NetworkManager != null)
             NetworkManager.OnClientConnectedCallback -= OnClientConnectedServer;
@@ -272,6 +275,11 @@ public class WorldMapManager : NetworkBehaviour
             GetLayer
         );
     }   
+
+    private void OnServerActivateEvent(string value)
+    {
+        OnServerActivated(true);
+    }
 
     private MapBounds CreateBounds()
     {
@@ -610,45 +618,38 @@ public class WorldMapManager : NetworkBehaviour
         if (!IsServer)
             return;
 
-        if (!TryGetPlacedAnchor(layer, cells, out var tileAnchor, out var subtileAnchor))
-            return;
+        MapObjectSpawnResult result = mapObjectSpawner.SpawnPlacedObjectOnline(
+            layer,
+            cells,
+            data
+        );
 
-        Vector2 worldPos = GetLayer(layer).SubtileToWorldPosition(tileAnchor, subtileAnchor);
-        var prefab = blockLibrary.GetMapBlockData(data.GetItemID())?.gameObject;
-
-        if (!prefab)
+        if (!result.Success)
         {
-            Debug.LogError($"[SpawnPlacedObjectOnline] Prefab id={data.GetItemID()} not found");
+            Debug.LogWarning($"[WorldMapManager] Online object spawn failed: {result.Message}");
             return;
         }
 
-        var serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
+        DictEntry[] serializedCells = DictEntry.SerializeDictionary(result.Cells).ToArray();
 
-        if (prefab.TryGetComponent<NetworkObject>(out _))
+        if (result.IsNetworkObject)
         {
-            var go = Instantiate(prefab, worldPos, Quaternion.identity);
-            var networkObject = go.GetComponent<NetworkObject>();
-
-            networkObject.Spawn();
-
-            mapObjectRegistry.RegisterNetworkObject(layer, cells, networkObject.NetworkObjectId);
-            
-            BindObjectByNetIdClientRpc(serializedCells, networkObject.NetworkObjectId, layer);
-        }
-        else
-        {
-            string id = NewId();
-
-            mapObjectRegistry.RegisterNetlessObject(layer, cells, id, data.GetItemID(), worldPos);
-            
-            SpawnNetlessClientRpc(
-                layer,
-                data.GetItemID(),
+            BindObjectByNetIdClientRpc(
                 serializedCells,
-                worldPos,
-                id
+                result.NetworkObjectId,
+                result.LayerType
             );
+
+            return;
         }
+
+        SpawnNetlessClientRpc(
+            result.LayerType,
+            result.ItemId,
+            serializedCells,
+            result.WorldPosition,
+            result.NetlessId
+        );
     }
 
     [ClientRpc]
