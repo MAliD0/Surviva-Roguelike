@@ -94,21 +94,10 @@ public class MapLayerLogic
     // safe check for a anchorSubtile at given cell and local anchorSubtile coordinate (0..7)
     public bool IsSubTilePresented(Vector2Int pos, Vector2Int subtilePos)
     {
-        if (!LayerTiles.ContainsKey(pos)) return false;
-
         if (!LayerTiles.TryGetValue(pos, out var inner))
-        {
-            Debug.Log("test");
             return false;
-        }
 
-        if (inner.ContainsKey(subtilePos))
-        {
-            Debug.LogWarning($"{subtilePos} was presented in {pos}");
-            return true;
-        }
-
-        return false;
+        return inner.ContainsKey(subtilePos);
     }
 
     // Convert world position to integral anchorTile cell (consistent with UtillityMath.VectorToVectorInt)
@@ -211,13 +200,17 @@ public class MapLayerLogic
         return GetFootprintCellLocalPairs(baseCell, baseLocal, sizeX, sizeY, anchorIsTopLeft);
     }
     
-    public bool IsFootprintFullyOccupied(Dictionary<Vector2Int, HashSet<Vector2Int>> pairs, int sizeX, int sizeY, bool anchorIsTopLeft = false)
+    public bool IsFootprintFullyOccupied(
+        Dictionary<Vector2Int, HashSet<Vector2Int>> pairs,
+        int sizeX,
+        int sizeY,
+        bool anchorIsTopLeft = false
+    )
     {
         foreach (Vector2Int tileCell in pairs.Keys)
         {
             foreach (Vector2Int localPos in pairs[tileCell])
             {
-                // check bounds for each anchorTile cell (optional)
                 if (!_bounds.Contains(tileCell))
                 {
                     Debug.LogWarning($"[Place] {tileCell} out of bounds");
@@ -226,29 +219,25 @@ public class MapLayerLogic
 
                 if (!IsSubTilePresented(tileCell, localPos))
                 {
-                    Debug.LogWarning($"[Place] subtile {localPos} in cell {tileCell} occupied");
-                    return false;
-                }
-
-                // also check if the full anchorTile (main anchorTile) blocks placement if necessary:
-                if (!IsTilePresented(tileCell))
-                {
-                    Debug.LogWarning($"[Place] main tile {tileCell} occupied");
+                    Debug.LogWarning($"[Place] subtile {localPos} in cell {tileCell} is missing");
                     return false;
                 }
             }
         }
 
         return true;
-
     }
-    public bool IsFootprintOccupied(Dictionary<Vector2Int, HashSet<Vector2Int>> pairs, int sizeX, int sizeY, bool anchorIsTopLeft = false)
+    public bool IsFootprintOccupied(
+        Dictionary<Vector2Int, HashSet<Vector2Int>> pairs,
+        int sizeX,
+        int sizeY,
+        bool anchorIsTopLeft = false
+    )
     {
         foreach (Vector2Int tileCell in pairs.Keys)
         {
             foreach (Vector2Int localPos in pairs[tileCell])
             {
-                // check bounds for each anchorTile cell (optional)
                 if (!_bounds.Contains(tileCell))
                 {
                     Debug.LogWarning($"[Place] {tileCell} out of bounds");
@@ -260,18 +249,10 @@ public class MapLayerLogic
                     Debug.LogWarning($"[Place] subtile {localPos} in cell {tileCell} occupied");
                     return true;
                 }
-
-                // also check if the full anchorTile (main anchorTile) blocks placement if necessary:
-                if (IsTilePresented(tileCell))
-                {
-                    Debug.LogWarning($"[Place] main tile {tileCell} occupied");
-                    return true;
-                }
             }
         }
 
         return false;
-
     }
    
     public bool IsFootprintFullyOccupied(Vector2 clickWorldPos, int sizeX, int sizeY, bool anchorIsTopLeft = false)
@@ -300,39 +281,37 @@ public class MapLayerLogic
 
     public bool CanBePlaced(Vector2Int tile, Vector2Int subtile, MapBlockData data)
     {
-        if (data == null) return false;
+        if (data == null)
+            return false;
 
-
-        if (!_bounds.Contains(UtillityMath.VectorToVectorInt(tile)))
+        if (!_bounds.Contains(tile))
         {
-            Debug.LogWarning($"[Place] {tile} вне допустимых границ");
+            Debug.LogWarning($"[Place] {tile} outside bounds");
             return false;
         }
-        
-        Vector2 clickWorld = tile;
-        int sizeX = data.blockSize.x; // number of subtiles in X
-        int sizeY = data.blockSize.y; // number of subtiles in Y
 
         if (data.mapBlockType == MapBlockType.Tile)
         {
-            if (LayerTiles.ContainsKey(tile))
-                return false;
+            return !LayerTiles.ContainsKey(tile);
         }
-        else
+
+        if (data.mapBlockType == MapBlockType.GameObject)
         {
             if (data.gridAligned)
             {
-                if (LayerTiles.ContainsKey(tile))
-                    return false;
+                return !LayerTiles.ContainsKey(tile);
             }
-            else
-            {
-                if (IsFootprintOccupied(tile, subtile, data.blockSize.x, data.blockSize.y, anchorIsTopLeft: false))
-                    return false;
-            }
+
+            return !IsFootprintOccupied(
+                tile,
+                subtile,
+                data.blockSize.x,
+                data.blockSize.y,
+                anchorIsTopLeft: false
+            );
         }
 
-        return true;
+        return false;
     }
 
     // Replace PlaceBlock(Vector2Int tileIndex, Vector2Int subtileIndex, MapBlockData data)
