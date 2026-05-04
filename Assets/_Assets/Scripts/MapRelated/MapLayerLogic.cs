@@ -320,8 +320,16 @@ public class MapLayerLogic
         }
         else
         {
-            if (IsFootprintOccupied(tile, subtile, sizeX, sizeY, anchorIsTopLeft: false))
-                return false;
+            if (data.gridAligned)
+            {
+                if (LayerTiles.ContainsKey(tile))
+                    return false;
+            }
+            else
+            {
+                if (IsFootprintOccupied(tile, subtile, data.blockSize.x, data.blockSize.y, anchorIsTopLeft: false))
+                    return false;
+            }
         }
 
         return true;
@@ -430,56 +438,74 @@ public class MapLayerLogic
         return PlaceBlock(tile, localSub, data);
     }
 
-    public void RemoveTile(Vector2Int anchorTile, Vector2Int anchorSubtile)
+    public void RemoveTile(Vector2Int clickedTile, Vector2Int clickedSubtile)
     {
-        if (!LayerTiles.TryGetValue(anchorTile, out var subtiles)) return;
+        if (!LayerTiles.TryGetValue(clickedTile, out var subtiles))
+            return;
 
-        MapTile mapTile = LayerTiles[anchorTile][anchorSubtile];
+        if (!subtiles.TryGetValue(clickedSubtile, out MapTile clickedMapTile))
+            return;
 
-        var data = mapTile.BlockData;
-        var subtilePostion = anchorSubtile;
+        var data = clickedMapTile.BlockData;
 
-        Vector2 worldPosition = SubtileToWorldPosition(anchorTile, subtilePostion);
+        Vector2Int anchorTile = clickedMapTile.TileAnchor;
+        Vector2Int anchorSubtile = clickedMapTile.SubtileAnchor;
 
         Dictionary<Vector2Int, HashSet<Vector2Int>> occupiedTiles = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
 
         switch (data.mapBlockType)
         {
             case MapBlockType.Tile:
-                // for tile-type, remove all subtiles in the anchorTile cell
-                
-                occupiedTiles.Add(anchorTile, LayerTiles[anchorTile].Keys.ToHashSet<Vector2Int>());
+                if (!LayerTiles.TryGetValue(anchorTile, out var tileSubtiles))
+                    return;
 
-                foreach (var local in LayerTiles[anchorTile].Keys.ToList())
-                {
-                    LayerTiles[anchorTile].Remove(local);
-                }
+                occupiedTiles.Add(anchorTile, tileSubtiles.Keys.ToHashSet());
+
+                foreach (var local in tileSubtiles.Keys.ToList())
+                    tileSubtiles.Remove(local);
 
                 LayerTiles.Remove(anchorTile);
                 break;
-            default:
-                occupiedTiles = GetFootprintCellLocalPairs(anchorTile, subtilePostion, data.blockSize.x, data.blockSize.y);
 
-                foreach (Vector2Int tile in occupiedTiles.Keys)
+            default:
+                if (data.gridAligned)
                 {
-                    foreach (Vector2Int subtile in occupiedTiles[tile])
+                    if (!LayerTiles.TryGetValue(anchorTile, out var gridSubtiles))
+                        return;
+
+                    occupiedTiles.Add(anchorTile, gridSubtiles.Keys.ToHashSet());
+
+                    foreach (var local in gridSubtiles.Keys.ToList())
+                        gridSubtiles.Remove(local);
+
+                    LayerTiles.Remove(anchorTile);
+                }
+                else
+                {
+                    occupiedTiles = GetFootprintCellLocalPairs(
+                        anchorTile,
+                        anchorSubtile,
+                        data.blockSize.x,
+                        data.blockSize.y
+                    );
+
+                    foreach (Vector2Int tile in occupiedTiles.Keys.ToList())
                     {
-                        if (LayerTiles.ContainsKey(tile) && LayerTiles[tile].ContainsKey(subtile))
+                        foreach (Vector2Int subtile in occupiedTiles[tile])
                         {
-                            LayerTiles[tile].Remove(subtile);
-                            if (LayerTiles[tile].Count == 0)
-                                LayerTiles.Remove(tile);
+                            if (LayerTiles.ContainsKey(tile) && LayerTiles[tile].ContainsKey(subtile))
+                                LayerTiles[tile].Remove(subtile);
                         }
+
+                        if (LayerTiles.ContainsKey(tile) && LayerTiles[tile].Count == 0)
+                            LayerTiles.Remove(tile);
                     }
                 }
                 break;
         }
 
-        //foreach (var cell in group) LayerTiles.Remove(cell);
-
         onMapTileRemoved?.Invoke(occupiedTiles, data.mapBlockType);
     }
-
     public void RemoveAllTiles()
     {
         LayerTiles = new SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, MapTile>>();

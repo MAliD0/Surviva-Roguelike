@@ -123,9 +123,16 @@ public class PlayerManager : NetworkBehaviour
 
         playerMovement.Move(inputX, inputY);
 
-        if(itemHeld.itemData != null && itemHeld.itemData.itemType == ItemType.Placeable)
+        if (itemHeld.itemData != null && itemHeld.itemData.itemType == ItemType.Placeable)
         {
-            GhostBuildManager.Instance.PlaceGhost(playerInputManager.mouseWorldPosition, (MapBlockData)itemHeld.itemData);
+            GhostBuildManager.Instance.PlaceGhost(
+                playerInputManager.mouseWorldPosition,
+                (MapBlockData)itemHeld.itemData
+            );
+        }
+        else
+        {
+            GhostBuildManager.Instance.ClearGhost();
         }
     }
 

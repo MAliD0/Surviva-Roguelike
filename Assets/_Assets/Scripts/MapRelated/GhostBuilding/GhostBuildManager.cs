@@ -90,4 +90,15 @@ public class GhostBuildManager : MonoBehaviour
 
         return placementSucceed;
     }
+
+    public void ClearGhost()
+    {
+        if (ghostLayerLogic == null)
+            return;
+
+        ghostLayerLogic.RemoveAllTiles();
+
+        lastAnchorPoint = new Vector2Int(int.MinValue, int.MinValue);
+        lastSubtilePoint = new Vector2Int(int.MinValue, int.MinValue);
+    }
 }
