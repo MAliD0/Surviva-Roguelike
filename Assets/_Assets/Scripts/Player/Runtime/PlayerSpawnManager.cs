@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -11,13 +12,13 @@ public class PlayerSpawnManager : MonoBehaviour
 
     private GameObject spawnedOfflinePlayer;
 
-    private void Start()
-    {
-        if (IsOnlineMode())
-            return;
+    // private void Start()
+    // {
+    //     if (IsOnlineMode())
+    //         return;
 
-        SpawnOfflinePlayer();
-    }
+    //     SpawnOfflinePlayer();
+    // }
 
     private bool IsOnlineMode()
     {
@@ -25,6 +26,7 @@ public class PlayerSpawnManager : MonoBehaviour
                NetworkManager.Singleton.IsListening;
     }
 
+    [Button]
     private void SpawnOfflinePlayer()
     {
         if (offlinePlayerPrefab == null)

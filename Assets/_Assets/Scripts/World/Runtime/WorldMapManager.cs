@@ -568,43 +568,42 @@ public class WorldMapManager : NetworkBehaviour
         if (type != MapBlockType.GameObject)
             return;
 
-        var serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
+        MapObjectRemovalResult result = mapObjectSpawner.RemovePlacedObject(
+            layer,
+            cells,
+            IsOnlineMode
+        );
 
-        if (mapObjectRegistry.TryFindNetworkObject(layer, cells, out var registeredTile, out var registeredSubtile, out ulong networkId))        {
-            if (NetworkManager.Singleton != null &&
-                NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkId, out var networkObject))
-            {
-                networkObject.Despawn(true);
-            }
-
-            mapObjectRegistry.RemoveNetworkObject(layer, registeredTile, registeredSubtile);
-
-            if (IsOnlineMode)
-                BindObjectByNetIdClientRpc(serializedCells, 0, layer);
-            else
-                GetGraphics(layer).UnbindByCells(serializedCells, destroyNonNetworked: true);
-
-            return;
-        }
-
-        if (mapObjectRegistry.TryFindNetlessObject(layer, cells, out var netlessTile, out var netlessSubtile, out string id))
+        if (!result.Success)
         {
-            mapObjectRegistry.RemoveNetlessObject(layer, netlessTile, netlessSubtile, id);
+            Debug.LogWarning($"[WorldMapManager] Object removal failed: {result.Message}");
+            return;
+        }
 
-            if (IsOnlineMode)
-                RemoveNetlessClientRpc(id, layer);
-            else
-                GetGraphics(layer).UnbindById(id);
+        if (!IsOnlineMode)
+            return;
+
+        if (result.NeedsNetlessRemoveRpc)
+        {
+            RemoveNetlessClientRpc(
+                result.NetlessId,
+                result.LayerType
+            );
 
             return;
         }
 
-        if (IsOnlineMode)
-            UnbindByCellsClientRpc(serializedCells, layer, destroyNonNetworked: true);
-        else
-            GetGraphics(layer).UnbindByCells(serializedCells, destroyNonNetworked: true);
-    }
+        if (result.NeedsNetworkUnbindByCells)
+        {
+            DictEntry[] serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
 
+            BindObjectByNetIdClientRpc(
+                serializedCells,
+                0,
+                result.LayerType
+            );
+        }
+    }
     // =========================================================
     // Object spawning
     // =========================================================

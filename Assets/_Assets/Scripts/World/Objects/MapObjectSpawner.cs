@@ -193,4 +193,83 @@ public class MapObjectSpawner
             worldPosition
         );
     }
+
+    public MapObjectRemovalResult RemovePlacedObject(
+        MapLayerType layerType,
+        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
+        bool isOnlineMode
+    )
+    {
+        DictEntry[] serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
+
+        if (registry.TryFindNetworkObject(
+                layerType,
+                cells,
+                out Vector2Int registeredTile,
+                out Vector2Int registeredSubtile,
+                out ulong networkId
+            ))
+        {
+            if (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkId, out NetworkObject networkObject))
+            {
+                networkObject.Despawn(true);
+            }
+
+            registry.RemoveNetworkObject(
+                layerType,
+                registeredTile,
+                registeredSubtile
+            );
+
+            if (isOnlineMode)
+                return MapObjectRemovalResult.RemovedNetworkObject(layerType);
+
+            MapLayerGraphics graphics = getGraphics?.Invoke(layerType);
+
+            if (graphics != null)
+                graphics.UnbindByCells(serializedCells, destroyNonNetworked: true);
+
+            return MapObjectRemovalResult.RemovedOffline();
+        }
+
+        if (registry.TryFindNetlessObject(
+                layerType,
+                cells,
+                out Vector2Int netlessTile,
+                out Vector2Int netlessSubtile,
+                out string id
+            ))
+        {
+            registry.RemoveNetlessObject(
+                layerType,
+                netlessTile,
+                netlessSubtile,
+                id
+            );
+
+            if (isOnlineMode)
+                return MapObjectRemovalResult.RemovedNetlessObject(layerType, id);
+
+            MapLayerGraphics graphics = getGraphics?.Invoke(layerType);
+
+            if (graphics != null)
+                graphics.UnbindById(id);
+
+            return MapObjectRemovalResult.RemovedOffline();
+        }
+
+        MapLayerGraphics fallbackGraphics = getGraphics?.Invoke(layerType);
+
+        if (fallbackGraphics != null && !isOnlineMode)
+        {
+            fallbackGraphics.UnbindByCells(serializedCells, destroyNonNetworked: true);
+            return MapObjectRemovalResult.RemovedOffline();
+        }
+
+        if (isOnlineMode)
+            return MapObjectRemovalResult.RemovedNetworkObject(layerType);
+
+        return MapObjectRemovalResult.NoObject();
+    }
 }
