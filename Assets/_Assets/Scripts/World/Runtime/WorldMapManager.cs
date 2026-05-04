@@ -37,22 +37,18 @@ public class WorldMapManager : NetworkBehaviour
     [FoldoutGroup("Layer References")]
     [Header("Back Layer")]
     [SerializeField] private MapLayerGraphics baseLayerGraphics;
-    [SerializeField] private MapLayerLogic baseLayer;
 
     [FoldoutGroup("Layer References")]
     [Header("Fore Layer")]
     [SerializeField] private MapLayerGraphics foreLayerGraphics;
-    [SerializeField] private MapLayerLogic foreLayer;
 
     [FoldoutGroup("Layer References")]
     [Header("Boat Layer")]
     [SerializeField] private MapLayerGraphics boatLayerGraphics;
-    [SerializeField] private MapLayerLogic boatLayer;
 
     [FoldoutGroup("Layer References")]
     [Header("On Boat Layer")]
     [SerializeField] private MapLayerGraphics onBoatLayerGraphics;
-    [SerializeField] private MapLayerLogic onBoatLayer;
 
     public static WorldMapManager Instance { get; private set; }
 
@@ -60,6 +56,8 @@ public class WorldMapManager : NetworkBehaviour
     private WorldMapService worldMapService;
     private MapObjectRegistry mapObjectRegistry;
     private MapObjectSpawner mapObjectSpawner;
+    private WorldMapLayers worldMapLayers;
+    
     [SerializeField] private WorldMapNetworkSync networkSync;
 
 
@@ -108,15 +106,15 @@ public class WorldMapManager : NetworkBehaviour
 
     private void Start()
     {
-        CreateLayers();
-        InitGraphics();
-        InitNetworkSync();
+        InitLayers();
 
         InitObjectRegistry();
         InitObjectSpawner();
 
         InitPlacementValidator();
         InitWorldMapService();
+        InitNetworkSync();
+
         if (runMode == WorldMapRunMode.Offline)
         {
             SubscribeAuthoritativeLayerEvents();
@@ -195,6 +193,17 @@ public class WorldMapManager : NetworkBehaviour
             NewId
         );
     }
+
+    private void InitLayers()
+    {
+        worldMapLayers = new WorldMapLayers(
+            CreateBounds(),
+            baseLayerGraphics,
+            foreLayerGraphics,
+            boatLayerGraphics,
+            onBoatLayerGraphics
+        );
+    }
     private void SubscribeNetworkCallbacks()
     {
         if (NetworkManager != null)
@@ -211,15 +220,34 @@ public class WorldMapManager : NetworkBehaviour
 
         authoritativeEventsSubscribed = true;
 
-        baseLayer.onMapTilePlaced += OnBaseLayerTilePlaced;
-        foreLayer.onMapTilePlaced += OnForeLayerTilePlaced;
-        boatLayer.onMapTilePlaced += OnBoatLayerTilePlaced;
-        onBoatLayer.onMapTilePlaced += OnOnBoatLayerTilePlaced;
+        MapLayerLogic baseLayer = GetLayer(MapLayerType.backGround);
+        MapLayerLogic foreLayer = GetLayer(MapLayerType.foreGround);
+        MapLayerLogic boatLayer = GetLayer(MapLayerType.boatGround);
+        MapLayerLogic onBoatLayer = GetLayer(MapLayerType.onBoatGround);
 
-        baseLayer.onMapTileRemoved += OnBaseLayerTileRemoved;
-        foreLayer.onMapTileRemoved += OnForeLayerTileRemoved;
-        boatLayer.onMapTileRemoved += OnBoatLayerTileRemoved;
-        onBoatLayer.onMapTileRemoved += OnOnBoatLayerTileRemoved;
+        if (baseLayer != null)
+        {
+            baseLayer.onMapTilePlaced += OnBaseLayerTilePlaced;
+            baseLayer.onMapTileRemoved += OnBaseLayerTileRemoved;
+        }
+
+        if (foreLayer != null)
+        {
+            foreLayer.onMapTilePlaced += OnForeLayerTilePlaced;
+            foreLayer.onMapTileRemoved += OnForeLayerTileRemoved;
+        }
+
+        if (boatLayer != null)
+        {
+            boatLayer.onMapTilePlaced += OnBoatLayerTilePlaced;
+            boatLayer.onMapTileRemoved += OnBoatLayerTileRemoved;
+        }
+
+        if (onBoatLayer != null)
+        {
+            onBoatLayer.onMapTilePlaced += OnOnBoatLayerTilePlaced;
+            onBoatLayer.onMapTileRemoved += OnOnBoatLayerTileRemoved;
+        }
     }
 
     private void UnsubscribeAuthoritativeLayerEvents()
@@ -229,15 +257,34 @@ public class WorldMapManager : NetworkBehaviour
 
         authoritativeEventsSubscribed = false;
 
-        baseLayer.onMapTilePlaced -= OnBaseLayerTilePlaced;
-        foreLayer.onMapTilePlaced -= OnForeLayerTilePlaced;
-        boatLayer.onMapTilePlaced -= OnBoatLayerTilePlaced;
-        onBoatLayer.onMapTilePlaced -= OnOnBoatLayerTilePlaced;
+        MapLayerLogic baseLayer = GetLayer(MapLayerType.backGround);
+        MapLayerLogic foreLayer = GetLayer(MapLayerType.foreGround);
+        MapLayerLogic boatLayer = GetLayer(MapLayerType.boatGround);
+        MapLayerLogic onBoatLayer = GetLayer(MapLayerType.onBoatGround);
 
-        baseLayer.onMapTileRemoved -= OnBaseLayerTileRemoved;
-        foreLayer.onMapTileRemoved -= OnForeLayerTileRemoved;
-        boatLayer.onMapTileRemoved -= OnBoatLayerTileRemoved;
-        onBoatLayer.onMapTileRemoved -= OnOnBoatLayerTileRemoved;
+        if (baseLayer != null)
+        {
+            baseLayer.onMapTilePlaced -= OnBaseLayerTilePlaced;
+            baseLayer.onMapTileRemoved -= OnBaseLayerTileRemoved;
+        }
+
+        if (foreLayer != null)
+        {
+            foreLayer.onMapTilePlaced -= OnForeLayerTilePlaced;
+            foreLayer.onMapTileRemoved -= OnForeLayerTileRemoved;
+        }
+
+        if (boatLayer != null)
+        {
+            boatLayer.onMapTilePlaced -= OnBoatLayerTilePlaced;
+            boatLayer.onMapTileRemoved -= OnBoatLayerTileRemoved;
+        }
+
+        if (onBoatLayer != null)
+        {
+            onBoatLayer.onMapTilePlaced -= OnOnBoatLayerTilePlaced;
+            onBoatLayer.onMapTileRemoved -= OnOnBoatLayerTileRemoved;
+        }
     }
 
     private void OnBaseLayerTilePlaced(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockData data)
@@ -263,22 +310,6 @@ public class WorldMapManager : NetworkBehaviour
 
     private void OnOnBoatLayerTileRemoved(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockType type)
         => OnAuthoritativeTileRemoved(MapLayerType.onBoatGround, cells, type);
-
-    private void CreateLayers()
-    {
-        baseLayer = new MapLayerLogic(CreateBounds());
-        foreLayer = new MapLayerLogic(CreateBounds());
-        boatLayer = new MapLayerLogic(CreateBounds());
-        onBoatLayer = new MapLayerLogic(CreateBounds());
-    }
-
-    private void InitGraphics()
-    {
-        baseLayerGraphics.Init(baseLayer);
-        foreLayerGraphics.Init(foreLayer);
-        boatLayerGraphics.Init(boatLayer);
-        onBoatLayerGraphics.Init(onBoatLayer);
-    }
 
     private void InitObjectRegistry()
     {
@@ -804,36 +835,12 @@ public class WorldMapManager : NetworkBehaviour
 
     public MapLayerLogic GetLayer(MapLayerType type)
     {
-        switch (type)
-        {
-            case MapLayerType.backGround:
-                return baseLayer;
-            case MapLayerType.foreGround:
-                return foreLayer;
-            case MapLayerType.boatGround:
-                return boatLayer;
-            case MapLayerType.onBoatGround:
-                return onBoatLayer;
-            default:
-                return null;
-        }
+        return worldMapLayers?.GetLayer(type);
     }
 
     public MapLayerGraphics GetGraphics(MapLayerType type)
     {
-        switch (type)
-        {
-            case MapLayerType.backGround:
-                return baseLayerGraphics;
-            case MapLayerType.foreGround:
-                return foreLayerGraphics;
-            case MapLayerType.boatGround:
-                return boatLayerGraphics;
-            case MapLayerType.onBoatGround:
-                return onBoatLayerGraphics;
-            default:
-                return baseLayerGraphics;
-        }
+        return worldMapLayers?.GetGraphics(type);
     }
 
     public IEnumerable<NetworkObjectRegistryEntry> GetNetworkObjectRegistryEntries()
@@ -859,18 +866,14 @@ public class WorldMapManager : NetworkBehaviour
     {
         UnsubscribeAuthoritativeLayerEvents();
 
-        onBoatLayerGraphics.ClearTilemap();
-        baseLayerGraphics.ClearTilemap();
-        foreLayerGraphics.ClearTilemap();
-        boatLayerGraphics.ClearTilemap();
+        worldMapLayers?.ClearTilemaps();
 
-        CreateLayers();
-        InitGraphics();
-        InitNetworkSync();
+        InitLayers();
         InitObjectRegistry();
         InitObjectSpawner();
         InitPlacementValidator();
         InitWorldMapService();
+        InitNetworkSync();
 
         if (runMode == WorldMapRunMode.Offline || IsServer)
             SubscribeAuthoritativeLayerEvents();
@@ -885,14 +888,7 @@ public class WorldMapManager : NetworkBehaviour
     [ClientRpc]
     private void ClearTilemapsClientRpc()
     {
-        onBoatLayerGraphics.ClearTilemap();
-        baseLayerGraphics.ClearTilemap();
-        foreLayerGraphics.ClearTilemap();
-        boatLayerGraphics.ClearTilemap();
-
-        onBoatLayer.LayerTiles.Clear();
-        baseLayer.LayerTiles.Clear();
-        boatLayer.LayerTiles.Clear();
-        foreLayer.LayerTiles.Clear();
+        worldMapLayers?.ClearTilemaps();
+        worldMapLayers?.ClearLayerData();
     }
 }
