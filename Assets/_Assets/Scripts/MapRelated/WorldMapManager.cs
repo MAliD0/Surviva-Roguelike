@@ -422,41 +422,65 @@ public class WorldMapManager : NetworkBehaviour
         
     }
 
-    private void OnServer_TileRemoved(MapLayerType layer,Dictionary<Vector2Int,HashSet<Vector2Int>>cells, MapBlockType type)
+    private void OnServer_TileRemoved(
+        MapLayerType layer,
+        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
+        MapBlockType type
+    )
     {
-        if (type != MapBlockType.GameObject) return;
+        if (type != MapBlockType.GameObject)
+            return;
 
         var anchor = cells.Keys.First();
         var subtile = cells[anchor].First();
+        var serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
 
-        // 1) Пытаемся удалить сетевой GO
-        if (_anchorToNetId.TryGetValue(layer, out var dictNet) && dictNet.TryGetValue(anchor, out var netId))
+        // 1) Network object cleanup
+        if (_anchorToNetId.TryGetValue(layer, out var dictNet) &&
+            dictNet.TryGetValue(anchor, out var subtileToNetId) &&
+            subtileToNetId.TryGetValue(subtile, out ulong networkId))
         {
-            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(netId[subtile], out var no))
+            if (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkId, out var no))
+            {
                 no.Despawn(true);
+            }
 
-            dictNet.Remove(anchor);
+            subtileToNetId.Remove(subtile);
 
-            // отвязываем cell->GO на клиентах (без уничтожения — объект уже деспавнен)
-            
-            BindObjectByNetIdClientRpc(DictEntry.SerializeDictionary(cells).ToArray(), 0, layer, ConnectionManager.instance.SendAllExceptHost()); // 0 = unbind
+            if (subtileToNetId.Count == 0)
+                dictNet.Remove(anchor);
+
+            if (dictNet.Count == 0)
+                _anchorToNetId.Remove(layer);
+
+            // Tell all clients, including host, to unbind graphics cache
+            BindObjectByNetIdClientRpc(serializedCells, 0, layer);
 
             return;
         }
 
-        // 2) Иначе — не-сетевой
-        if (_anchorToNetlessId.TryGetValue(layer, out var dict) && dict.TryGetValue(anchor, out var id))
+        // 2) Non-networked object cleanup
+        if (_anchorToNetlessId.TryGetValue(layer, out var dict) &&
+            dict.TryGetValue(anchor, out var idDict) &&
+            idDict.TryGetValue(subtile, out string id))
         {
-            dict.Remove(anchor);
-            _netlessRegistry.Remove(id[subtile]);
+            idDict.Remove(subtile);
 
-            // Клиенты сами найдут GO по id и уничтожат его
-            RemoveNetlessClientRpc(id[subtile], layer);
+            if (idDict.Count == 0)
+                dict.Remove(anchor);
+
+            if (dict.Count == 0)
+                _anchorToNetlessId.Remove(layer);
+
+            _netlessRegistry.Remove(id);
+
+            RemoveNetlessClientRpc(id, layer);
             return;
         }
 
-        // Fallback: просто отвязать на клиентах (если где-то несостыковка)
-        UnbindByCellsClientRpc(DictEntry.SerializeDictionary(cells).ToArray(), layer, destroyNonNetworked: true);
+        // 3) Fallback cleanup
+        UnbindByCellsClientRpc(serializedCells, layer, destroyNonNetworked: true);
     }
 
     // ============ Клиентские RPC (все клиенты или таргет) ============
@@ -492,24 +516,37 @@ public class WorldMapManager : NetworkBehaviour
         layer.RemoveTile(tile, subtile);
     }
 
-    [ClientRpc]
-    private void BindObjectByNetIdClientRpc(DictEntry[] serializedTiles, ulong netId, MapLayerType layer, ClientRpcParams rpcParams = default)
+[ClientRpc]
+    private void BindObjectByNetIdClientRpc(
+        DictEntry[] serializedTiles,
+        ulong netId,
+        MapLayerType layer,
+        ClientRpcParams rpcParams = default
+    )
     {
-        Dictionary<Vector2Int, HashSet<Vector2Int>> tiles = DictEntry.DictEntryToDictionary(serializedTiles.ToList());
+        Dictionary<Vector2Int, HashSet<Vector2Int>> tiles =
+            DictEntry.DictEntryToDictionary(serializedTiles.ToList());
+
+        // netId == 0 means: unbind / cleanup cached graphics reference
+        if (netId == 0)
+        {
+            GetGraphics(layer).UnbindByCells(serializedTiles, destroyNonNetworked: false);
+            return;
+        }
 
         if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(netId, out var no))
         {
             foreach (Vector2Int anchor in tiles.Keys)
             {
-                // На крайне редких лагах — попробуем пару кадров подождать
-                StartCoroutine(RetryBind(anchor,tiles[anchor].ToArray(), netId, layer));
+                StartCoroutine(RetryBind(anchor, tiles[anchor].ToArray(), netId, layer));
             }
+
             return;
         }
-        
-        foreach(Vector2Int anchor in tiles.Keys)
+
+        foreach (Vector2Int anchor in tiles.Keys)
         {
-            GetGraphics(layer).BindObject(anchor, tiles[anchor].ToList(), no.gameObject, null);    
+            GetGraphics(layer).BindObject(anchor, tiles[anchor].ToList(), no.gameObject, null);
         }
     }
 

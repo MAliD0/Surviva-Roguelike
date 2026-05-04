@@ -152,8 +152,12 @@ public class MapLayerGraphics : NetworkBehaviour
                 CellToGO.Remove(tile);
         }
 
-        if (destroyNonNetworked && objectToDestroy != null && !objectToDestroy.TryGetComponent<NetworkObject>(out _))
+        if (destroyNonNetworked &&
+            objectToDestroy != null &&
+            !objectToDestroy.TryGetComponent<NetworkObject>(out _))
+        {
             Destroy(objectToDestroy);
+        }
     }
 
     public void UnbindById(string netlessId)
