@@ -57,16 +57,14 @@ public class WorldMapManager : NetworkBehaviour
     private MapObjectRegistry mapObjectRegistry;
     private MapObjectSpawner mapObjectSpawner;
     private WorldMapLayers worldMapLayers;
+    private WorldMapLayerEventRouter layerEventRouter;
+
     
     [SerializeField] private WorldMapNetworkSync networkSync;
 
 
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
     public MapBlockDataLibrary BlockLibrary => blockLibrary;
-
-    private bool authoritativeEventsSubscribed = false;
-
-
 
     public Dictionary<string, MapObjectRegistry.NetlessEntry> GetNetlessRegistry()
     {
@@ -113,6 +111,7 @@ public class WorldMapManager : NetworkBehaviour
 
         InitPlacementValidator();
         InitWorldMapService();
+        InitLayerEventRouter();
         InitNetworkSync();
 
         if (runMode == WorldMapRunMode.Offline)
@@ -160,6 +159,14 @@ public class WorldMapManager : NetworkBehaviour
 
         SubscribeAuthoritativeLayerEvents();
         SubscribeNetworkCallbacks();
+    }
+    private void InitLayerEventRouter()
+    {
+        layerEventRouter = new WorldMapLayerEventRouter(
+            GetLayer,
+            OnAuthoritativeTilePlaced,
+            OnAuthoritativeTileRemoved
+        );
     }
     private void InitNetworkSync()
     {
@@ -215,101 +222,13 @@ public class WorldMapManager : NetworkBehaviour
 
     private void SubscribeAuthoritativeLayerEvents()
     {
-        if (authoritativeEventsSubscribed)
-            return;
-
-        authoritativeEventsSubscribed = true;
-
-        MapLayerLogic baseLayer = GetLayer(MapLayerType.backGround);
-        MapLayerLogic foreLayer = GetLayer(MapLayerType.foreGround);
-        MapLayerLogic boatLayer = GetLayer(MapLayerType.boatGround);
-        MapLayerLogic onBoatLayer = GetLayer(MapLayerType.onBoatGround);
-
-        if (baseLayer != null)
-        {
-            baseLayer.onMapTilePlaced += OnBaseLayerTilePlaced;
-            baseLayer.onMapTileRemoved += OnBaseLayerTileRemoved;
-        }
-
-        if (foreLayer != null)
-        {
-            foreLayer.onMapTilePlaced += OnForeLayerTilePlaced;
-            foreLayer.onMapTileRemoved += OnForeLayerTileRemoved;
-        }
-
-        if (boatLayer != null)
-        {
-            boatLayer.onMapTilePlaced += OnBoatLayerTilePlaced;
-            boatLayer.onMapTileRemoved += OnBoatLayerTileRemoved;
-        }
-
-        if (onBoatLayer != null)
-        {
-            onBoatLayer.onMapTilePlaced += OnOnBoatLayerTilePlaced;
-            onBoatLayer.onMapTileRemoved += OnOnBoatLayerTileRemoved;
-        }
+        layerEventRouter?.Subscribe();
     }
 
     private void UnsubscribeAuthoritativeLayerEvents()
     {
-        if (!authoritativeEventsSubscribed)
-            return;
-
-        authoritativeEventsSubscribed = false;
-
-        MapLayerLogic baseLayer = GetLayer(MapLayerType.backGround);
-        MapLayerLogic foreLayer = GetLayer(MapLayerType.foreGround);
-        MapLayerLogic boatLayer = GetLayer(MapLayerType.boatGround);
-        MapLayerLogic onBoatLayer = GetLayer(MapLayerType.onBoatGround);
-
-        if (baseLayer != null)
-        {
-            baseLayer.onMapTilePlaced -= OnBaseLayerTilePlaced;
-            baseLayer.onMapTileRemoved -= OnBaseLayerTileRemoved;
-        }
-
-        if (foreLayer != null)
-        {
-            foreLayer.onMapTilePlaced -= OnForeLayerTilePlaced;
-            foreLayer.onMapTileRemoved -= OnForeLayerTileRemoved;
-        }
-
-        if (boatLayer != null)
-        {
-            boatLayer.onMapTilePlaced -= OnBoatLayerTilePlaced;
-            boatLayer.onMapTileRemoved -= OnBoatLayerTileRemoved;
-        }
-
-        if (onBoatLayer != null)
-        {
-            onBoatLayer.onMapTilePlaced -= OnOnBoatLayerTilePlaced;
-            onBoatLayer.onMapTileRemoved -= OnOnBoatLayerTileRemoved;
-        }
+        layerEventRouter?.Unsubscribe();
     }
-
-    private void OnBaseLayerTilePlaced(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockData data)
-        => OnAuthoritativeTilePlaced(MapLayerType.backGround, cells, data);
-
-    private void OnForeLayerTilePlaced(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockData data)
-        => OnAuthoritativeTilePlaced(MapLayerType.foreGround, cells, data);
-
-    private void OnBoatLayerTilePlaced(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockData data)
-        => OnAuthoritativeTilePlaced(MapLayerType.boatGround, cells, data);
-
-    private void OnOnBoatLayerTilePlaced(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockData data)
-        => OnAuthoritativeTilePlaced(MapLayerType.onBoatGround, cells, data);
-
-    private void OnBaseLayerTileRemoved(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockType type)
-        => OnAuthoritativeTileRemoved(MapLayerType.backGround, cells, type);
-
-    private void OnForeLayerTileRemoved(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockType type)
-        => OnAuthoritativeTileRemoved(MapLayerType.foreGround, cells, type);
-
-    private void OnBoatLayerTileRemoved(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockType type)
-        => OnAuthoritativeTileRemoved(MapLayerType.boatGround, cells, type);
-
-    private void OnOnBoatLayerTileRemoved(Dictionary<Vector2Int, HashSet<Vector2Int>> cells, MapBlockType type)
-        => OnAuthoritativeTileRemoved(MapLayerType.onBoatGround, cells, type);
 
     private void InitObjectRegistry()
     {
@@ -732,12 +651,15 @@ public class WorldMapManager : NetworkBehaviour
         worldMapLayers?.ClearTilemaps();
 
         InitLayers();
+        InitLayerEventRouter();
+
         InitObjectRegistry();
         InitObjectSpawner();
+
         InitPlacementValidator();
         InitWorldMapService();
         InitNetworkSync();
-
+        
         if (runMode == WorldMapRunMode.Offline || IsServer)
             SubscribeAuthoritativeLayerEvents();
     }
