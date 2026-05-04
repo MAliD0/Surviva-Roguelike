@@ -41,6 +41,8 @@ public class WorldMapManager : NetworkBehaviour
 
     public static WorldMapManager Instance { get; private set; }
 
+    private bool serverEventsSubscribed = false;
+
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
 
     // ---------- Серверные реестры ----------
@@ -92,30 +94,6 @@ public class WorldMapManager : NetworkBehaviour
         _netlessRegistry = new SerializedDictionary<string, NetlessEntry>();
         _anchorToNetId = new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, ulong>>>(); 
             
-        if(ConnectionManager.instance != null)
-        {
-            ConnectionManager.instance.onServerActivate += (x) =>
-            {
-                // Подписки на события слоёв — ТОЛЬКО на сервере
-                if (IsServer)
-                {
-                    print("Enter");
-                    baseLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.backGround, cells, data);
-                    foreLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.foreGround, cells, data);
-                    boatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.boatGround, cells, data);
-                    onBoatLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.onBoatGround, cells, data);
-
-                    baseLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.backGround, cells, type);
-                    foreLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.foreGround, cells, type);
-                    boatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.boatGround, cells, type);
-                    onBoatLayer.onMapTileRemoved += (cells, type) => OnServer_TileRemoved(MapLayerType.onBoatGround, cells, type);
-
-                    // Для снапшотов нетворк-лесс при позднем коннекте
-                    NetworkManager.OnClientConnectedCallback += OnClientConnectedServer;
-                }
-            };
-        }
-
         if (ConnectionManager.instance != null)
         {
             ConnectionManager.instance.onServerActivate += (x) => {OnServerActivated(true);};
@@ -131,6 +109,9 @@ public class WorldMapManager : NetworkBehaviour
     private void OnServerActivated(bool active)
     {
         if (!IsServer) return;
+        if (serverEventsSubscribed) return;
+
+        serverEventsSubscribed = true;
 
         baseLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.backGround, cells, data);
         foreLayer.onMapTilePlaced += (cells, data) => OnServer_TilePlaced(MapLayerType.foreGround, cells, data);
@@ -247,10 +228,11 @@ public class WorldMapManager : NetworkBehaviour
         // 4) если сломали — дроп и удаление
         if (broken)
         {
-            //DropLootServer(anchor, data);
-            LootSpawnerManager.Instance.SpawnLootForBlock(layer.GetMapTile(pos).BlockData, pos);
-            layer.RemoveTile(anchor, subtileIndex); // вызовет onMapTileRemoved -> графика чистит
-            DestroyTileForClientsClientRpc(anchor, subtileIndex,layerType, ConnectionManager.instance.SendAllExceptHost());
+            LootSpawnerManager.Instance.SpawnLootForBlock(data, pos);
+
+            // This triggers OnServer_TileRemoved, which despawns network object
+            // and tells clients to clean bindings.
+            layer.RemoveTile(anchor, subtileIndex);
         }
     }
 
@@ -436,9 +418,7 @@ public class WorldMapManager : NetworkBehaviour
         var serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
 
         // 1) Network object cleanup
-        if (_anchorToNetId.TryGetValue(layer, out var dictNet) &&
-            dictNet.TryGetValue(anchor, out var subtileToNetId) &&
-            subtileToNetId.TryGetValue(subtile, out ulong networkId))
+        if (TryFindRegisteredNetId(layer, cells, out var registeredTile, out var registeredSubtile, out ulong networkId))
         {
             if (NetworkManager.Singleton != null &&
                 NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkId, out var no))
@@ -446,17 +426,18 @@ public class WorldMapManager : NetworkBehaviour
                 no.Despawn(true);
             }
 
-            subtileToNetId.Remove(subtile);
+            var layerDict = _anchorToNetId[layer];
+            var subtileDict = layerDict[registeredTile];
 
-            if (subtileToNetId.Count == 0)
-                dictNet.Remove(anchor);
+            subtileDict.Remove(registeredSubtile);
 
-            if (dictNet.Count == 0)
+            if (subtileDict.Count == 0)
+                layerDict.Remove(registeredTile);
+
+            if (layerDict.Count == 0)
                 _anchorToNetId.Remove(layer);
 
-            // Tell all clients, including host, to unbind graphics cache
             BindObjectByNetIdClientRpc(serializedCells, 0, layer);
-
             return;
         }
 
@@ -615,6 +596,42 @@ public class WorldMapManager : NetworkBehaviour
 
 
     // ============ Вспомогалки ============
+
+    private bool TryFindRegisteredNetId(
+        MapLayerType layer,
+        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
+        out Vector2Int registeredTile,
+        out Vector2Int registeredSubtile,
+        out ulong networkId
+    )
+    {
+        registeredTile = default;
+        registeredSubtile = default;
+        networkId = 0;
+
+        if (!_anchorToNetId.TryGetValue(layer, out var layerDict))
+            return false;
+
+        foreach (var tilePair in cells)
+        {
+            Vector2Int tile = tilePair.Key;
+
+            if (!layerDict.TryGetValue(tile, out var subtileDict))
+                continue;
+
+            foreach (Vector2Int subtile in tilePair.Value)
+            {
+                if (subtileDict.TryGetValue(subtile, out networkId))
+                {
+                    registeredTile = tile;
+                    registeredSubtile = subtile;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
     private bool ValidatePlacement(Vector2 pos, MapBlockData data)
     {
         if (data == null)
