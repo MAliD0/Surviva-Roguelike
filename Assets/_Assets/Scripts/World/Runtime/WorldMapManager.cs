@@ -6,12 +6,6 @@ using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 
-public enum WorldMapRunMode
-{
-    Offline,
-    Online
-}
-
 /// <summary>
 /// High-level world map manager.
 /// 
@@ -64,6 +58,7 @@ public class WorldMapManager : NetworkBehaviour
     public static WorldMapManager Instance { get; private set; }
 
     private MapPlacementValidator placementValidator;
+    private WorldMapService worldMapService;
 
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
 
@@ -138,6 +133,7 @@ public class WorldMapManager : NetworkBehaviour
         InitGraphics();
         InitRegistries();
         InitPlacementValidator();
+        InitWorldMapService();
 
         if (runMode == WorldMapRunMode.Offline)
         {
@@ -184,7 +180,14 @@ public class WorldMapManager : NetworkBehaviour
         SubscribeAuthoritativeLayerEvents();
         SubscribeNetworkCallbacks();
     }
-
+    private void InitWorldMapService()
+    {
+        worldMapService = new WorldMapService(
+            blockLibrary,
+            placementValidator,
+            GetLayer
+        );
+    }
     private void SubscribeNetworkCallbacks()
     {
         if (NetworkManager != null)
@@ -301,10 +304,13 @@ public class WorldMapManager : NetworkBehaviour
 
     public PlacementResult GetPlacementResult(Vector2 worldPosition, string blockId)
     {
-        if (placementValidator == null)
+        if (worldMapService == null)
+        {
             InitPlacementValidator();
+            InitWorldMapService();
+        }
 
-        return placementValidator.Validate(worldPosition, blockId);
+        return worldMapService.GetPlacementResult(worldPosition, blockId);
     }
 
     public bool CheckIfPlacementIsPossible(Vector2 worldPosition, string blockId)
@@ -436,28 +442,19 @@ public class WorldMapManager : NetworkBehaviour
 
     private bool PlaceBlockLocal(Vector2 worldPosition, string blockId, bool syncClients)
     {
-        PlacementResult placementResult = GetPlacementResult(worldPosition, blockId);
+        WorldMapOperationResult result = worldMapService.PlaceBlock(worldPosition, blockId);
 
-        if (!placementResult.Success)
+        if (!result.Success)
         {
-            Debug.LogWarning(placementResult.ToString());
+            Debug.LogWarning(result.Message);
             return false;
         }
-
-        var data = blockLibrary.GetMapBlockData(blockId);
-        var targetLayer = GetLayer(data.mapLayerType);
-
-        if (targetLayer == null)
-            return false;
-
-        if (!targetLayer.PlaceBlock(worldPosition, data))
-            return false;
 
         if (syncClients)
         {
             SetTileForClientsClientRpc(
-                data.mapLayerType,
-                data.GetItemID(),
+                result.BlockData.mapLayerType,
+                result.BlockData.GetItemID(),
                 worldPosition,
                 SendAllExceptHostOrDefault()
             );
@@ -467,49 +464,40 @@ public class WorldMapManager : NetworkBehaviour
     }
     private bool DamageBlockLocal(Vector2 worldPosition, int amount, bool syncClients)
     {
-        MapLayerType layerType = DetectLayerByCell(worldPosition);
-        MapLayerLogic layer = GetLayer(layerType);
+        WorldMapOperationResult result = worldMapService.DamageBlock(worldPosition, amount);
 
-        if (layer == null)
+        if (!result.Success)
+        {
+            Debug.LogWarning(result.Message);
             return false;
-
-        var tile = layer.GetMapTile(worldPosition);
-        var data = tile?.BlockData;
-
-        if (data == null || !data.breakable)
-            return false;
-
-        Vector2Int anchor = tile.TileAnchor;
-        Vector2Int subtile = tile.SubtileAnchor;
-
-        bool broken = layer.Damage(anchor, subtile, data, Mathf.Max(1, amount));
+        }
 
         if (syncClients)
         {
             UpdateTileHealthClientRpc(
-                layerType,
-                anchor,
-                subtile,
-                layer.GetHealth(anchor, subtile),
-                data.maxHealth,
+                result.LayerType,
+                result.TileAnchor,
+                result.SubtileAnchor,
+                result.CurrentHealth,
+                result.MaxHealth,
                 SendAllExceptHostOrDefault()
             );
         }
 
-        if (!broken)
+        if (!result.Broken)
             return true;
 
         if (LootSpawnerManager.Instance != null)
-            LootSpawnerManager.Instance.SpawnLootForBlock(data, worldPosition);
+            LootSpawnerManager.Instance.SpawnLootForBlock(result.BlockData, result.WorldPosition);
 
-        layer.RemoveTile(anchor, subtile);
+        result.Layer.RemoveTile(result.TileAnchor, result.SubtileAnchor);
 
         if (syncClients)
         {
             DestroyTileForClientsClientRpc(
-                anchor,
-                subtile,
-                layerType,
+                result.TileAnchor,
+                result.SubtileAnchor,
+                result.LayerType,
                 SendAllExceptHostOrDefault()
             );
         }
@@ -519,47 +507,23 @@ public class WorldMapManager : NetworkBehaviour
 
     private bool DestroyBlockLocal(Vector2Int tile, Vector2Int subtile, bool syncClients)
     {
-        MapLayerLogic layer = null;
-        MapLayerType layerType = MapLayerType.backGround;
+        WorldMapOperationResult result = worldMapService.DestroyBlock(tile, subtile);
 
-        if (foreLayer.IsSubTilePresented(tile, subtile))
+        if (!result.Success)
         {
-            layer = foreLayer;
-            layerType = MapLayerType.foreGround;
-        }
-        else if (baseLayer.IsSubTilePresented(tile, subtile))
-        {
-            layer = baseLayer;
-            layerType = MapLayerType.backGround;
-        }
-        else if (boatLayer.IsSubTilePresented(tile, subtile))
-        {
-            layer = boatLayer;
-            layerType = MapLayerType.boatGround;
-        }
-        else if (onBoatLayer.IsSubTilePresented(tile, subtile))
-        {
-            layer = onBoatLayer;
-            layerType = MapLayerType.onBoatGround;
-        }
-
-        if (layer == null)
+            Debug.LogWarning(result.Message);
             return false;
+        }
 
-        var mapTile = layer.GetMapTile(tile, subtile);
-        var data = mapTile?.BlockData;
-
-        if (data != null && LootSpawnerManager.Instance != null)
-            LootSpawnerManager.Instance.SpawnLootForBlock(data, layer.SubtileToWorldPosition(tile, subtile));
-
-        layer.RemoveTile(tile, subtile);
+        if (result.BlockData != null && LootSpawnerManager.Instance != null)
+            LootSpawnerManager.Instance.SpawnLootForBlock(result.BlockData, result.WorldPosition);
 
         if (syncClients)
         {
             DestroyTileForClientsClientRpc(
-                tile,
-                subtile,
-                layerType,
+                result.TileAnchor,
+                result.SubtileAnchor,
+                result.LayerType,
                 SendAllExceptHostOrDefault()
             );
         }
@@ -1123,23 +1087,6 @@ public class WorldMapManager : NetworkBehaviour
             default:
                 return baseLayerGraphics;
         }
-    }
-
-    private MapLayerType DetectLayerByCell(Vector2 pos)
-    {
-        if (foreLayer.IsTilePresented(pos))
-            return MapLayerType.foreGround;
-
-        if (baseLayer.IsTilePresented(pos))
-            return MapLayerType.backGround;
-
-        if (onBoatLayer.IsTilePresented(pos))
-            return MapLayerType.onBoatGround;
-
-        if (boatLayer.IsTilePresented(pos))
-            return MapLayerType.boatGround;
-
-        return MapLayerType.backGround;
     }
 
     // =========================================================
