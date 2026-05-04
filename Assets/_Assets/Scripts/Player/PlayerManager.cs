@@ -1,106 +1,203 @@
 using Cinemachine;
-using Sirenix.OdinInspector;
 using System.Collections.Generic;
-using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 
 public class PlayerManager : NetworkBehaviour
 {
-    [SerializeField] PlayerController playerMovement;
-    [SerializeField] PlayerAnimationController playerAnimationController;
-    [SerializeField] PlayerInputManager playerInputManager;
-    [SerializeField] PlayerInteractionManager playerInteractionManager;
-    [SerializeField] PlayerCraftingManager playerCraftingManager;
+    [SerializeField] private PlayerController playerMovement;
+    [SerializeField] private PlayerAnimationController playerAnimationController;
+    [SerializeField] private PlayerInputManager playerInputManager;
+    [SerializeField] private PlayerInteractionManager playerInteractionManager;
+    [SerializeField] private PlayerCraftingManager playerCraftingManager;
 
-    [SerializeField] Inventory inventory;
-    [SerializeField] DSManager dsManager;
-    [SerializeField] Rigidbody2D rb;
+    [SerializeField] private Inventory inventory;
+    [SerializeField] private DSManager dsManager;
+    [SerializeField] private Rigidbody2D rb;
 
+    [Header("Test Fields")]
+    [SerializeField] private int damage;
+    [SerializeField] private ItemSlot itemHeld;
 
-    [Space]
-    [Header("Test Fields:")]
-    [SerializeField] int damage;
-    [SerializeField] ItemSlot itemHeld;
-    [Header("Settings:")]
-    [SerializeField] int maxMessageLength = 36;
-    [SerializeField] float castRadius;
-
+    [Header("Settings")]
+    [SerializeField] private int maxMessageLength = 36;
+    [SerializeField] private float castRadius;
 
     private void Start()
     {
-        if (!IsOwner) return;
+        if (!HasLocalControl)
+            return;
 
-        playerMovement.rb = rb;
-        MessageMenu.instance.onMessageSent += (x) => { if (!dsManager.dsStarted) { MessageServerRpc(x); } };
-
-        InventoryUI.Instance.ConnectInventory(inventory);
-
-        InventoryUI.Instance.onItemIndexSelected += (x) =>
-        {
-            ItemSlot itemSlot = inventory.GetInventoryItems()[x];
-
-            itemHeld = itemSlot;
-        };
-
-        playerInputManager.onMouseLeftPress += (x) =>
-        {
-            Vector2Int vector2Int = UtillityMath.VectorToVectorInt(x);
-
-            if (itemHeld.itemData == null) return;
-
-            if (WorldMapManager.Instance.CheckIfPlacementIsPossible(x, itemHeld.itemData.GetItemID()))
-            {
-                if(WorldMapManager.Instance.CheckIfPlacementIsPossible(x, itemHeld.itemData.GetItemID()))
-                {
-                    WorldMapManager.Instance.SetTileRequestServerRpc(x, itemHeld.itemData.GetItemID());
-                    inventory.RemoveItem(itemHeld.itemData, 1);
-                }
-            }
-        };
-
-        playerInputManager.onMouseRightPress += (x) => 
-        {
-            WorldMapManager.Instance.DamageTileRequestServerRpc(x, damage);
-        };
-        playerInputManager.onInteractPress += () =>
-        {
-            IInteractable[] interactables = playerInteractionManager.CastForInteractables(transform.position, castRadius);
-            if (interactables.Length > 0)
-            {
-                interactables[0].OnInteract(this.gameObject, this.OwnerClientId);
-            }
-        };
-
-        //InventoryUI.Instance.SetInventoryItems(WorldMapManager.Instance.blockLibrary.dataLibrary.Values.ToList<ItemData>());
+        InitLocalPlayer();
     }
+    private void OnDestroy()
+    {
+        if (!HasLocalControl)
+            return;
+
+        if (MessageMenu.instance != null)
+            MessageMenu.instance.onMessageSent -= OnMessageSent;
+
+        if (InventoryUI.Instance != null)
+            InventoryUI.Instance.onItemIndexSelected -= OnItemIndexSelected;
+
+        if (playerInputManager != null)
+        {
+            playerInputManager.onMouseLeftPress -= OnLeftClick;
+            playerInputManager.onMouseRightPress -= OnRightClick;
+            playerInputManager.onInteractPress -= OnInteractPressed;
+        }
+    }
+
     public override void OnNetworkSpawn()
     {
-        if (IsOwner)
+        if (!HasLocalControl)
+            return;
+
+        SetupCamera();
+    }
+    
+    private void InitLocalPlayer()
+    {
+        playerMovement.rb = rb;
+
+        if (MessageMenu.instance != null)
+            MessageMenu.instance.onMessageSent += OnMessageSent;
+
+        if (InventoryUI.Instance != null)
         {
-            var vcam = FindObjectOfType<CinemachineVirtualCamera>();
-            if (vcam != null)
+            InventoryUI.Instance.ConnectInventory(inventory);
+            InventoryUI.Instance.onItemIndexSelected += OnItemIndexSelected;
+        }
+
+        playerInputManager.onMouseLeftPress += OnLeftClick;
+        playerInputManager.onMouseRightPress += OnRightClick;
+        playerInputManager.onInteractPress += OnInteractPressed;
+
+        SetupCamera();
+    }
+
+    private void SetupCamera()
+    {
+        var vcam = FindObjectOfType<Cinemachine.CinemachineVirtualCamera>();
+
+        if (vcam != null)
+        {
+            vcam.Follow = transform;
+            vcam.LookAt = transform;
+        }
+    }
+    private void OnItemIndexSelected(int index)
+    {
+        ItemSlot itemSlot = inventory.GetInventoryItems()[index];
+        itemHeld = itemSlot;
+    }
+
+    private void OnLeftClick(Vector2 worldPosition)
+    {
+        if (itemHeld.itemData == null)
+            return;
+
+        MapBlockData blockData = itemHeld.itemData as MapBlockData;
+
+        if (blockData == null)
+            return;
+
+        if (WorldMapManager.Instance == null)
+            return;
+
+        bool placementStarted = WorldMapManager.Instance.TryPlaceBlock(
+            worldPosition,
+            blockData.GetItemID()
+        );
+
+        if (placementStarted)
+        {
+            // For online clients this is still optimistic.
+            // Long-term: remove item only after server confirms placement.
+            inventory.RemoveItem(blockData, 1);
+        }
+    }
+
+    private void OnRightClick(Vector2 worldPosition)
+    {
+        if (WorldMapManager.Instance == null)
+            return;
+
+        WorldMapManager.Instance.TryDamageBlock(worldPosition, damage);
+    }
+
+    private void OnInteractPressed()
+    {
+        IInteractable[] interactables =
+            playerInteractionManager.CastForInteractables(transform.position, castRadius);
+
+        if (interactables.Length <= 0)
+            return;
+
+        interactables[0].OnInteract(gameObject, OwnerClientId);
+    }
+
+    private void OnMessageSent(string text)
+    {
+        if (dsManager.dsStarted)
+            return;
+
+        MessageServerRpc(text);
+    }
+
+    private void Update()
+    {
+        if (!HasLocalControl)
+            return;
+
+        HandleMovement();
+        HandleGhostBuilding();
+    }
+
+    private void HandleMovement()
+    {
+        float inputX = playerInputManager.movementDirection.x;
+        float inputY = playerInputManager.movementDirection.y;
+
+        if (inputX != 0)
+            playerAnimationController.FlipSprite(inputX > 0);
+
+        playerAnimationController.SetBool("IsWalking", inputX != 0 || inputY != 0);
+        playerMovement.Move(inputX, inputY);
+    }
+
+    private void HandleGhostBuilding()
+    {
+        if (itemHeld.itemData is MapBlockData blockData)
+        {
+            if (GhostBuildManager.Instance != null)
             {
-                vcam.Follow = transform;
-                vcam.LookAt = transform;
+                GhostBuildManager.Instance.PlaceGhost(
+                    playerInputManager.mouseWorldPosition,
+                    blockData
+                );
             }
 
+            return;
         }
+
+        if (GhostBuildManager.Instance != null)
+            GhostBuildManager.Instance.ClearGhost();
     }
 
     [ClientRpc]
     private void MessageClientRpc(string text)
     {
-        Debug.Log("Enter Client RPC:" + text);
+        Debug.Log("Enter Client RPC: " + text);
         dsManager.SayText(text);
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void MessageServerRpc(string text)
     {
-        Debug.Log("Enter Client RPC:" + text);
-
-        MessageClientRpc(text.Substring(0, Mathf.Min(text.Length, maxMessageLength)));
+        string limitedText = text.Substring(0, Mathf.Min(text.Length, maxMessageLength));
+        MessageClientRpc(limitedText);
     }
 
     [ClientRpc]
@@ -109,40 +206,19 @@ public class PlayerManager : NetworkBehaviour
         inventory.AddItem(itemId, number);
     }
 
-    private void Update()
-    {
-        if (!IsOwner) return;
-
-        float inputX = playerInputManager.movementDirection.x;
-        float inputY = playerInputManager.movementDirection.y;
-
-        if (inputX != 0)
-            playerAnimationController.FlipSprite(inputX > 0);
-
-        playerAnimationController.SetBool("IsWalking", (inputX != 0 || inputY != 0));
-
-        playerMovement.Move(inputX, inputY);
-
-        if (itemHeld.itemData != null && itemHeld.itemData.itemType == ItemType.Placeable)
-        {
-            GhostBuildManager.Instance.PlaceGhost(
-                playerInputManager.mouseWorldPosition,
-                (MapBlockData)itemHeld.itemData
-            );
-        }
-        else
-        {
-            GhostBuildManager.Instance.ClearGhost();
-        }
-    }
-
-    private void FixedUpdate()
-    {
-        if (!IsOwner) return;
-    }
-
     public void OpenCraftingMenu(List<ItemData> craftableItems)
     {
         playerCraftingManager.OpenCraftingMenu(craftableItems);
+    }
+
+    private bool HasLocalControl
+    {
+        get
+        {
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+                return true;
+
+            return IsOwner;
+        }
     }
 }
