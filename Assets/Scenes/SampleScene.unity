@@ -1168,6 +1168,7 @@ GameObject:
   - component: {fileID: 250896767}
   - component: {fileID: 250896769}
   - component: {fileID: 250896768}
+  - component: {fileID: 250896775}
   - component: {fileID: 250896770}
   - component: {fileID: 250896771}
   - component: {fileID: 250896772}
@@ -1257,7 +1258,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blockLibrary: {fileID: 11400000, guid: ea70ddb7b10094f45b9a4611fec05960, type: 2}
-  runMode: 0
+  runMode: 1
   useBounds: 1
   minX: -128
   maxX: 127
@@ -1287,6 +1288,7 @@ MonoBehaviour:
       _serializedList: []
     anchorHp:
       _serializedList: []
+  networkSync: {fileID: 250896775}
 --- !u!114 &250896769
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1389,6 +1391,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   offlinePlayerPrefab: {fileID: 2720719857553812312, guid: 87dcfcdb12a18ac4fae8c24f44d2297f, type: 3}
   spawnPoint: {fileID: 250896763}
+--- !u!114 &250896775
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 250896761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50d324ea55a928f4ab0fb8989e54f9e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &295054081
 GameObject:
   m_ObjectHideFlags: 0

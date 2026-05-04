@@ -190,7 +190,8 @@ namespace ProceduralGeneration
                                 if (currentHeight <= tileTypes[i].height)
                                 {
                                     tileVariant.Add(tileTypes[i].tile);
-                                    worldMapManager.SetTileRequestServerRpc((Vector2Int)tilePosition, tileTypes[i].tile.name);
+                                    
+                                    //worldMapManager.SetTile((Vector2Int)tilePosition, tileTypes[i].tile.name);
                                     
                                     //tilemap.SetTile(new Vector3Int(x, y), tileTypes[i].tile);
                                     break;
@@ -270,7 +271,7 @@ namespace ProceduralGeneration
                     List<Vector2> points = PoissonDicsSampling.GeneratePoints(8, additionalGeneratingObject.radius, new Vector2(noiseSettings.mapWidth, noiseSettings.mapHeight), 30);
                     foreach (var p in points)
                     {
-                        worldMapManager.SetTileRequestServerRpc(p, additionalGeneratingObject.mapBlockData.GetItemID());
+                        //worldMapManager.SetTile(p, additionalGeneratingObject.mapBlockData.GetItemID());
                     }
                     return;
             }
@@ -291,7 +292,7 @@ namespace ProceduralGeneration
 
                             if(currentHeight > additionalGeneratingObject.minValue && currentHeight < additionalGeneratingObject.maxValue)
                             {
-                                worldMapManager.SetTileRequestServerRpc((Vector2Int)tilePosition, additionalGeneratingObject.mapBlockData.GetItemID());
+                                //worldMapManager.SetTileRequestServerRpc((Vector2Int)tilePosition, additionalGeneratingObject.mapBlockData.GetItemID());
                             }
                         }
                     }

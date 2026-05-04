@@ -60,8 +60,11 @@ public class WorldMapManager : NetworkBehaviour
     private WorldMapService worldMapService;
     private MapObjectRegistry mapObjectRegistry;
     private MapObjectSpawner mapObjectSpawner;
+    [SerializeField] private WorldMapNetworkSync networkSync;
+
 
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
+    public MapBlockDataLibrary BlockLibrary => blockLibrary;
 
     private bool authoritativeEventsSubscribed = false;
 
@@ -107,13 +110,13 @@ public class WorldMapManager : NetworkBehaviour
     {
         CreateLayers();
         InitGraphics();
+        InitNetworkSync();
 
         InitObjectRegistry();
         InitObjectSpawner();
 
         InitPlacementValidator();
         InitWorldMapService();
-
         if (runMode == WorldMapRunMode.Offline)
         {
             SubscribeAuthoritativeLayerEvents();
@@ -160,6 +163,20 @@ public class WorldMapManager : NetworkBehaviour
         SubscribeAuthoritativeLayerEvents();
         SubscribeNetworkCallbacks();
     }
+    private void InitNetworkSync()
+    {
+        if (networkSync == null)
+            networkSync = GetComponent<WorldMapNetworkSync>();
+
+        if (networkSync == null)
+        {
+            Debug.LogError("[WorldMapManager] WorldMapNetworkSync component is missing.");
+            return;
+        }
+
+        networkSync.Init(this);
+    }
+
     private void InitWorldMapService()
     {
         worldMapService = new WorldMapService(
@@ -325,7 +342,7 @@ public class WorldMapManager : NetworkBehaviour
                 return false;
             }
 
-            SetTileRequestServerRpc(worldPosition, blockId);
+            networkSync.SetTileRequestServerRpc(worldPosition, blockId);
             return true;
         }
 
@@ -336,7 +353,7 @@ public class WorldMapManager : NetworkBehaviour
     {
         if (IsOnlineMode && !IsServer)
         {
-            DamageTileRequestServerRpc(worldPosition, amount);
+            networkSync.DamageTileRequestServerRpc(worldPosition, amount);
             return true;
         }
 
@@ -347,86 +364,39 @@ public class WorldMapManager : NetworkBehaviour
     {
         if (IsOnlineMode && !IsServer)
         {
-            DestroyTileRequestServerRpc(tile, subtile);
+            networkSync.DestroyTileRequestServerRpc(tile, subtile);
             return true;
         }
 
         return DestroyBlockLocal(tile, subtile, syncClients: IsOnlineMode && IsServer);
     }
 
-    // =========================================================
-    // RPC entry points
-    // =========================================================
-
-    [ServerRpc(RequireOwnership = false)]
-    public void SetTileRequestServerRpc(Vector2 pos, string mapBlockDataId)
+    ///
+    /// Network entry methods
+    /// 
+    
+    public bool PlaceBlockFromNetwork(Vector2 worldPosition, string blockId)
     {
-        PlaceBlockLocal(pos, mapBlockDataId, syncClients: true);
+        if (!IsServer)
+            return false;
+
+        return PlaceBlockLocal(worldPosition, blockId, syncClients: true);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void DamageTileRequestServerRpc(Vector2 pos, int amount)
+    public bool DamageBlockFromNetwork(Vector2 worldPosition, int amount)
     {
-        DamageBlockLocal(pos, amount, syncClients: true);
+        if (!IsServer)
+            return false;
+
+        return DamageBlockLocal(worldPosition, amount, syncClients: true);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void DestroyTileRequestServerRpc(Vector2Int tile, Vector2Int subtile)
+    public bool DestroyBlockFromNetwork(Vector2Int tile, Vector2Int subtile)
     {
-        DestroyBlockLocal(tile, subtile, syncClients: true);
-    }
+        if (!IsServer)
+            return false;
 
-    [ClientRpc]
-    private void SetTileForClientsClientRpc(
-        MapLayerType tileType,
-        string mapBlockDataID,
-        Vector2 position,
-        ClientRpcParams rpcParams = default
-    )
-    {
-        var layer = GetLayer(tileType);
-        var data = blockLibrary.GetMapBlockData(mapBlockDataID);
-
-        if (layer == null || data == null)
-            return;
-
-        layer.PlaceBlock(position, data);
-    }
-
-    [ClientRpc]
-    private void DestroyTileForClientsClientRpc(
-        Vector2Int tile,
-        Vector2Int subtile,
-        MapLayerType tileType,
-        ClientRpcParams rpcParams = default
-    )
-    {
-        var layer = GetLayer(tileType);
-
-        if (layer == null)
-            return;
-
-        layer.RemoveTile(tile, subtile);
-    }
-
-    [ClientRpc]
-    private void UpdateTileHealthClientRpc(
-        MapLayerType layerType,
-        Vector2Int anchor,
-        Vector2Int subtile,
-        int hp,
-        int maxHp,
-        ClientRpcParams rpcParams = default
-    )
-    {
-        var layer = GetLayer(layerType);
-        var tile = layer?.GetMapTile(anchor, subtile);
-        var data = tile?.BlockData;
-
-        if (layer == null || data == null)
-            return;
-
-        layer.SetHealth(anchor, subtile, data, hp, fireEvent: true);
+        return DestroyBlockLocal(tile, subtile, syncClients: true);
     }
 
     // =========================================================
@@ -445,7 +415,7 @@ public class WorldMapManager : NetworkBehaviour
 
         if (syncClients)
         {
-            SetTileForClientsClientRpc(
+            networkSync.SetTileForClientsClientRpc(
                 result.BlockData.mapLayerType,
                 result.BlockData.GetItemID(),
                 worldPosition,
@@ -467,7 +437,7 @@ public class WorldMapManager : NetworkBehaviour
 
         if (syncClients)
         {
-            UpdateTileHealthClientRpc(
+            networkSync.UpdateTileHealthClientRpc(
                 result.LayerType,
                 result.TileAnchor,
                 result.SubtileAnchor,
@@ -487,7 +457,7 @@ public class WorldMapManager : NetworkBehaviour
 
         if (syncClients)
         {
-            DestroyTileForClientsClientRpc(
+            networkSync.DestroyTileForClientsClientRpc(
                 result.TileAnchor,
                 result.SubtileAnchor,
                 result.LayerType,
@@ -513,7 +483,7 @@ public class WorldMapManager : NetworkBehaviour
 
         if (syncClients)
         {
-            DestroyTileForClientsClientRpc(
+            networkSync.DestroyTileForClientsClientRpc(
                 result.TileAnchor,
                 result.SubtileAnchor,
                 result.LayerType,
@@ -896,6 +866,7 @@ public class WorldMapManager : NetworkBehaviour
 
         CreateLayers();
         InitGraphics();
+        InitNetworkSync();
         InitObjectRegistry();
         InitObjectSpawner();
         InitPlacementValidator();
