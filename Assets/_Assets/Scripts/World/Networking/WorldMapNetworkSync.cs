@@ -164,6 +164,15 @@ public class WorldMapNetworkSync : NetworkBehaviour
         }
     }
 
+    [ClientRpc]
+    public void ClearTilemapsClientRpc(ClientRpcParams rpcParams = default)
+    {
+        if (world == null)
+            return;
+
+        world.ClearLocalTilemapsAndLayerData();
+    }
+
     private IEnumerator RetryBind(
         Vector2Int tile,
         Vector2Int[] subtiles,

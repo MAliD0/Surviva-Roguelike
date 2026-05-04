@@ -586,7 +586,7 @@ public class WorldMapManager : NetworkBehaviour
 
         if (result.NeedsNetlessRemoveRpc)
         {
-            RemoveNetlessClientRpc(
+            networkSync.RemoveNetlessClientRpc(
                 result.NetlessId,
                 result.LayerType
             );
@@ -598,7 +598,7 @@ public class WorldMapManager : NetworkBehaviour
         {
             DictEntry[] serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
 
-            BindObjectByNetIdClientRpc(
+            networkSync.BindObjectByNetIdClientRpc(
                 serializedCells,
                 0,
                 result.LayerType
@@ -634,7 +634,7 @@ public class WorldMapManager : NetworkBehaviour
 
         if (result.IsNetworkObject)
         {
-            BindObjectByNetIdClientRpc(
+            networkSync.BindObjectByNetIdClientRpc(
                 serializedCells,
                 result.NetworkObjectId,
                 result.LayerType
@@ -643,117 +643,13 @@ public class WorldMapManager : NetworkBehaviour
             return;
         }
 
-        SpawnNetlessClientRpc(
+        networkSync.SpawnNetlessClientRpc(
             result.LayerType,
             result.ItemId,
             serializedCells,
             result.WorldPosition,
             result.NetlessId
         );
-    }
-
-    [ClientRpc]
-    private void BindObjectByNetIdClientRpc(
-        DictEntry[] serializedTiles,
-        ulong netId,
-        MapLayerType layer,
-        ClientRpcParams rpcParams = default
-    )
-    {
-        if (netId == 0)
-        {
-            GetGraphics(layer).UnbindByCells(serializedTiles, destroyNonNetworked: false);
-            return;
-        }
-
-        Dictionary<Vector2Int, HashSet<Vector2Int>> tiles =
-            DictEntry.DictEntryToDictionary(serializedTiles.ToList());
-
-        if (NetworkManager.Singleton == null ||
-            !NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(netId, out var networkObject))
-        {
-            foreach (Vector2Int anchor in tiles.Keys)
-                StartCoroutine(RetryBind(anchor, tiles[anchor].ToArray(), netId, layer));
-
-            return;
-        }
-
-        foreach (Vector2Int anchor in tiles.Keys)
-        {
-            GetGraphics(layer).BindObject(anchor, tiles[anchor].ToList(), networkObject.gameObject, null);
-        }
-    }
-
-    private System.Collections.IEnumerator RetryBind(
-        Vector2Int tile,
-        Vector2Int[] subtiles,
-        ulong netId,
-        MapLayerType layer
-    )
-    {
-        for (int i = 0; i < 10; i++)
-        {
-            yield return null;
-
-            if (NetworkManager.Singleton != null &&
-                NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(netId, out var networkObject))
-            {
-                GetGraphics(layer).BindObject(tile, new List<Vector2Int>(subtiles), networkObject.gameObject, null);
-                yield break;
-            }
-        }
-
-        Debug.LogWarning($"[RetryBind] net object {netId} not found");
-    }
-
-    [ClientRpc]
-    private void SpawnNetlessClientRpc(
-        MapLayerType layer,
-        string itemId,
-        DictEntry[] occupiedTiles,
-        Vector3 pos,
-        string id,
-        ClientRpcParams rpcParams = default
-    )
-    {
-        var prefab = blockLibrary.GetMapBlockData(itemId)?.gameObject;
-
-        if (!prefab)
-        {
-            Debug.LogError($"[SpawnNetless] Prefab {itemId} not found");
-            return;
-        }
-
-        Dictionary<Vector2Int, HashSet<Vector2Int>> tiles =
-            DictEntry.DictEntryToDictionary(occupiedTiles.ToList());
-
-        var go = Instantiate(prefab, pos, Quaternion.identity);
-
-        foreach (Vector2Int anchor in tiles.Keys)
-        {
-            GetGraphics(layer).BindObject(anchor, tiles[anchor].ToList(), go, id);
-        }
-    }
-
-    [ClientRpc]
-    private void RemoveNetlessClientRpc(
-        string id,
-        MapLayerType layer,
-        ClientRpcParams rpcParams = default
-    )
-    {
-        GetGraphics(layer).UnbindById(id);
-    }
-
-    [ClientRpc]
-    private void UnbindByCellsClientRpc(
-        DictEntry[] cells,
-        MapLayerType layer,
-        bool destroyNonNetworked,
-        ClientRpcParams rpcParams = default
-    )
-    {
-        GetGraphics(layer).UnbindByCells(cells, destroyNonNetworked);
     }
 
     // =========================================================
@@ -777,7 +673,7 @@ public class WorldMapManager : NetworkBehaviour
         {
             var entry = kv.Value;
 
-            SpawnNetlessClientRpc(
+            networkSync.SpawnNetlessClientRpc(
                 entry.layer,
                 entry.itemId,
                 entry.occupiedTiles.ToArray(),
@@ -791,39 +687,6 @@ public class WorldMapManager : NetworkBehaviour
     // =========================================================
     // Helpers
     // =========================================================
-
-    private bool TryGetPlacedAnchor(
-        MapLayerType layerType,
-        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
-        out Vector2Int tileAnchor,
-        out Vector2Int subtileAnchor
-    )
-    {
-        tileAnchor = default;
-        subtileAnchor = default;
-
-        var layer = GetLayer(layerType);
-
-        if (layer == null)
-            return false;
-
-        foreach (var tilePair in cells)
-        {
-            foreach (Vector2Int localSubtile in tilePair.Value)
-            {
-                MapTile mapTile = layer.GetMapTile(tilePair.Key, localSubtile);
-
-                if (mapTile == null)
-                    continue;
-
-                tileAnchor = mapTile.TileAnchor;
-                subtileAnchor = mapTile.SubtileAnchor;
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     private ClientRpcParams SendAllExceptHostOrDefault()
     {
@@ -879,16 +742,17 @@ public class WorldMapManager : NetworkBehaviour
             SubscribeAuthoritativeLayerEvents();
     }
 
-    [Button]
-    public void ClearTilemapsForServer()
-    {
-        ClearTilemapsClientRpc();
-    }
-
-    [ClientRpc]
-    private void ClearTilemapsClientRpc()
+    public void ClearLocalTilemapsAndLayerData()
     {
         worldMapLayers?.ClearTilemaps();
         worldMapLayers?.ClearLayerData();
     }
+
+    [Button]
+    public void ClearTilemapsForServer()
+    {
+        networkSync.ClearTilemapsClientRpc();
+    }
+
+
 }
