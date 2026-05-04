@@ -7,6 +7,7 @@ using UnityEngine.Tilemaps;
 using static Unity.Collections.AllocatorManager;
 using NoiseGeneration;
 using Unity.Collections.LowLevel.Unsafe;
+using World;
 
 namespace ProceduralGeneration
 {

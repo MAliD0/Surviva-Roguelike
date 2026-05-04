@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
-
+using World;
 /// <summary>
 /// Late-join синхронизация: тайлы чанками, нетворк-лесс GO, биндинг сетевых GO.
 /// Без вращений/доп. фич — только базовая догрузка нового клиента.

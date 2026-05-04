@@ -1,4 +1,7 @@
-﻿using AYellowpaper.SerializedCollections;
+﻿namespace World
+{
+    
+using AYellowpaper.SerializedCollections;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
@@ -62,6 +65,8 @@ public class WorldMapManager : NetworkBehaviour
     [SerializeField] private MapLayerLogic onBoatLayer;
 
     public static WorldMapManager Instance { get; private set; }
+
+    private MapPlacementValidator placementValidator;
 
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
 
@@ -135,6 +140,7 @@ public class WorldMapManager : NetworkBehaviour
         CreateLayers();
         InitGraphics();
         InitRegistries();
+        InitPlacementValidator();
 
         if (runMode == WorldMapRunMode.Offline)
         {
@@ -158,6 +164,8 @@ public class WorldMapManager : NetworkBehaviour
             SubscribeAuthoritativeLayerEvents();
         }
     }
+
+
 
     private void OnDestroy()
     {
@@ -272,6 +280,14 @@ public class WorldMapManager : NetworkBehaviour
         _anchorToNetlessId = new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, string>>>();
     }
 
+    private void InitPlacementValidator()
+    {
+        placementValidator = new MapPlacementValidator(
+            blockLibrary,
+            GetLayer
+        );
+    }   
+
     private MapBounds CreateBounds()
     {
         return new MapBounds(minX, maxX, minY, maxY, useBounds);
@@ -283,15 +299,21 @@ public class WorldMapManager : NetworkBehaviour
 
     public bool CanPlaceBlock(Vector2 worldPosition, string blockId)
     {
-        var data = blockLibrary.GetMapBlockData(blockId);
-        return ValidatePlacement(worldPosition, data);
+        return GetPlacementResult(worldPosition, blockId).Success;
+    }
+
+    public PlacementResult GetPlacementResult(Vector2 worldPosition, string blockId)
+    {
+        if (placementValidator == null)
+            InitPlacementValidator();
+
+        return placementValidator.Validate(worldPosition, blockId);
     }
 
     public bool CheckIfPlacementIsPossible(Vector2 worldPosition, string blockId)
     {
-        return CanPlaceBlock(worldPosition, blockId);
+        return GetPlacementResult(worldPosition, blockId).Success;
     }
-
     public bool TryPlaceBlock(Vector2 worldPosition, string blockId)
     {
         if (string.IsNullOrEmpty(blockId))
@@ -299,8 +321,13 @@ public class WorldMapManager : NetworkBehaviour
 
         if (IsOnlineMode && !IsServer)
         {
-            if (!CanPlaceBlock(worldPosition, blockId))
+            PlacementResult placementResult = GetPlacementResult(worldPosition, blockId);
+
+            if (!placementResult.Success)
+            {
+                Debug.LogWarning(placementResult.ToString());
                 return false;
+            }
 
             SetTileRequestServerRpc(worldPosition, blockId);
             return true;
@@ -412,11 +439,15 @@ public class WorldMapManager : NetworkBehaviour
 
     private bool PlaceBlockLocal(Vector2 worldPosition, string blockId, bool syncClients)
     {
-        var data = blockLibrary.GetMapBlockData(blockId);
+        PlacementResult placementResult = GetPlacementResult(worldPosition, blockId);
 
-        if (!ValidatePlacement(worldPosition, data))
+        if (!placementResult.Success)
+        {
+            Debug.LogWarning(placementResult.ToString());
             return false;
+        }
 
+        var data = blockLibrary.GetMapBlockData(blockId);
         var targetLayer = GetLayer(data.mapLayerType);
 
         if (targetLayer == null)
@@ -437,7 +468,6 @@ public class WorldMapManager : NetworkBehaviour
 
         return true;
     }
-
     private bool DamageBlockLocal(Vector2 worldPosition, int amount, bool syncClients)
     {
         MapLayerType layerType = DetectLayerByCell(worldPosition);
@@ -549,43 +579,6 @@ public class WorldMapManager : NetworkBehaviour
         PlaceBlockLocal(pos, data.GetItemID(), syncClients: false);
     }
 
-    // =========================================================
-    // Placement validation
-    // =========================================================
-
-    private bool ValidatePlacement(Vector2 pos, MapBlockData data)
-    {
-        if (data == null)
-            return false;
-
-        var targetLayer = GetLayer(data.mapLayerType);
-
-        if (targetLayer == null)
-        {
-            Debug.LogError("[ValidatePlacement] targetLayer null");
-            return false;
-        }
-
-        if (data.mapLayerType == MapLayerType.foreGround)
-        {
-            if (!baseLayer.IsFootprintFullyOccupied(pos, data.blockSize.x, data.blockSize.y))
-            {
-                Debug.LogWarning($"[Rules] ForeGround without BackGround at {pos}");
-                return false;
-            }
-        }
-
-        if (data.mapLayerType == MapLayerType.onBoatGround)
-        {
-            if (baseLayer.IsFootprintOccupied(pos, data.blockSize.x, data.blockSize.y))
-            {
-                Debug.LogWarning($"[Rules] onBoatGround on occupied BackGround at {pos}");
-                return false;
-            }
-        }
-
-        return targetLayer.CanBePlaced(pos, data);
-    }
 
     // =========================================================
     // Authoritative tile callbacks
@@ -1199,4 +1192,5 @@ public class WorldMapManager : NetworkBehaviour
         boatLayer.LayerTiles.Clear();
         foreLayer.LayerTiles.Clear();
     }
+}
 }

@@ -1,94 +1,119 @@
-using System.Collections;
+namespace World
+{
+    
+
 using System.Collections.Generic;
-using UnityEngine;
-using System;
-using Sirenix.OdinInspector;
 using System.Linq;
+using Sirenix.OdinInspector;
+using UnityEngine;
 
 public class GhostBuildManager : MonoBehaviour
 {
-    public static GhostBuildManager Instance;
-    [SerializeField] MapLayerLogic ghostLayerLogic;
-    [SerializeField] MapLayerGraphics ghostLayerGraphics;
+    public static GhostBuildManager Instance { get; private set; }
 
-    [FoldoutGroup("Colours")][SerializeField] Color possiblePlacementColor;
-    [FoldoutGroup("Colours")][SerializeField] Color unpossiblePlacementColor;
+    [Header("Ghost Layer")]
+    [SerializeField] private MapLayerLogic ghostLayerLogic;
+    [SerializeField] private MapLayerGraphics ghostLayerGraphics;
 
-    [SerializeField] Color currentColor;
-    
-    [SerializeField] Vector2Int lastAnchorPoint;
-    [SerializeField] Vector2Int lastSubtilePoint;
+    [FoldoutGroup("Colours")]
+    [SerializeField] private Color possiblePlacementColor = new Color(0f, 1f, 0f, 0.5f);
 
-    /*TODO:
-    1. Add tilemap ghost placing;
-    */
-        
-    private void Awake() {
+    [FoldoutGroup("Colours")]
+    [SerializeField] private Color impossiblePlacementColor = new Color(1f, 0f, 0f, 0.5f);
+
+    [SerializeField, ReadOnly] private Color currentColor;
+
+    [Header("Debug")]
+    [SerializeField, ReadOnly] private Vector2Int lastAnchorPoint;
+    [SerializeField, ReadOnly] private Vector2Int lastSubtilePoint;
+    [SerializeField, ReadOnly] private PlacementFailReason lastFailReason;
+    [SerializeField, ReadOnly] private string lastFailMessage;
+
+    private MapBlockData lastBlockData;
+    private bool hasGhost;
+
+    private static readonly Vector2Int InvalidCell = new Vector2Int(int.MinValue, int.MinValue);
+
+    private void Awake()
+    {
         Instance = this;
     }
-    void Start()
-    {
-        ghostLayerLogic = new MapLayerLogic(new MapBounds(-127,127,-127,127, false));
 
-        ghostLayerGraphics.Init(ghostLayerLogic);
-        ghostLayerLogic.onMapTilePlaced +=  OnGhostTilePlaced;
+    private void Start()
+    {
+        InitializeGhostLayer();
     }
-    private void OnGhostTilePlaced(Dictionary<Vector2Int ,HashSet<Vector2Int>> cells, MapBlockData data)
+
+    private void OnDestroy()
     {
-        if (data.mapBlockType != MapBlockType.GameObject) return;
+        if (Instance == this)
+            Instance = null;
 
-        Vector2Int[] occupiedTiles = cells.Keys.ToArray();
+        if (ghostLayerLogic != null)
+            ghostLayerLogic.onMapTilePlaced -= OnGhostTilePlaced;
+    }
 
-        Vector2Int anchor = occupiedTiles[0];
-        Vector2Int anchorSubTile = cells[occupiedTiles[0]].First();
+    private void InitializeGhostLayer()
+    {
+        ghostLayerLogic = new MapLayerLogic(
+            new MapBounds(-127, 127, -127, 127, false)
+        );
 
-        Vector2 worldPos = ghostLayerLogic.SubtileToWorldPosition(occupiedTiles[0], anchorSubTile);
-
-        var prefab = WorldMapManager.Instance.blockLibrary.GetMapBlockData(data.GetItemID())?.gameObject;
-
-        if (!prefab)
+        if (ghostLayerGraphics == null)
         {
-            Debug.LogError($"[TilePlaced] Prefab id={data.GetItemID()} не найден");
+            Debug.LogError("[GhostBuildManager] ghostLayerGraphics is missing.");
             return;
         }
 
-        var go = Instantiate(prefab, worldPos, Quaternion.identity);
-        go.GetComponentInChildren<SpriteRenderer>().color = currentColor;
-        go.tag = "Ghost";
-        
-        foreach(Vector2Int subAnchor in cells.Keys)
-        {
-            ghostLayerGraphics.BindObject(subAnchor, cells[subAnchor].ToList(), go, "ghostBlock");
-        }
+        ghostLayerGraphics.Init(ghostLayerLogic);
+        ghostLayerLogic.onMapTilePlaced += OnGhostTilePlaced;
+
+        ResetLastPosition();
     }
 
-    public bool PlaceGhost(Vector2 pos, MapBlockData blockData)
+    public bool PlaceGhost(Vector2 worldPosition, MapBlockData blockData)
     {
-        Vector2Int newAnchorPoint = ghostLayerLogic.WorldToCell(pos);
-        Vector2Int newSubtilePoint= ghostLayerLogic.WorldToLocalSubtile(pos);
-        
-        bool placementSucceed = WorldMapManager.Instance.CheckIfPlacementIsPossible(pos, blockData.GetItemID());
+        if (blockData == null)
+        {
+            ClearGhost();
+            return false;
+        }
 
-        if(lastAnchorPoint == newAnchorPoint && lastSubtilePoint == newSubtilePoint) return placementSucceed;
+        if (WorldMapManager.Instance == null)
+        {
+            ClearGhost();
+            return false;
+        }
 
+        Vector2Int newAnchorPoint = ghostLayerLogic.WorldToCell(worldPosition);
+        Vector2Int newSubtilePoint = ghostLayerLogic.WorldToLocalSubtile(worldPosition);
+
+        PlacementResult placementResult = WorldMapManager.Instance.GetPlacementResult(
+            worldPosition,
+            blockData.GetItemID()
+        );
+
+        bool placementSucceeded = placementResult.Success;
+
+        bool samePosition =
+            hasGhost &&
+            lastBlockData == blockData &&
+            lastAnchorPoint == newAnchorPoint &&
+            lastSubtilePoint == newSubtilePoint &&
+            lastFailReason == placementResult.Reason;
+
+        if (samePosition)
+            return placementSucceeded;
+
+        lastBlockData = blockData;
         lastAnchorPoint = newAnchorPoint;
         lastSubtilePoint = newSubtilePoint;
+        lastFailReason = placementResult.Reason;
+        lastFailMessage = placementResult.Message;
 
-        ghostLayerLogic.RemoveAllTiles();
+        RebuildGhost(worldPosition, blockData, placementResult);
 
-        if(placementSucceed)
-        {
-            currentColor = possiblePlacementColor;
-        }
-        else
-        {
-            currentColor = unpossiblePlacementColor;
-        }
-        
-        ghostLayerGraphics.LayerVisualsTiles.color = currentColor;
-        ghostLayerLogic.PlaceBlock(pos, blockData);
-
-        return placementSucceed;
+        return placementSucceeded;
     }
 
     public void ClearGhost()
@@ -98,7 +123,154 @@ public class GhostBuildManager : MonoBehaviour
 
         ghostLayerLogic.RemoveAllTiles();
 
-        lastAnchorPoint = new Vector2Int(int.MinValue, int.MinValue);
-        lastSubtilePoint = new Vector2Int(int.MinValue, int.MinValue);
+        hasGhost = false;
+        lastBlockData = null;
+        lastFailReason = PlacementFailReason.None;
+        lastFailMessage = string.Empty;
+
+        ResetLastPosition();
     }
+
+    private void RebuildGhost(
+        Vector2 worldPosition,
+        MapBlockData blockData,
+        PlacementResult placementResult
+    )
+    {
+        ghostLayerLogic.RemoveAllTiles();
+
+        currentColor = placementResult.Success
+            ? possiblePlacementColor
+            : impossiblePlacementColor;
+
+        if (ghostLayerGraphics != null && ghostLayerGraphics.LayerVisualsTiles != null)
+            ghostLayerGraphics.LayerVisualsTiles.color = currentColor;
+
+        bool ghostPlaced = ghostLayerLogic.PlaceBlock(worldPosition, blockData);
+
+        if (!ghostPlaced)
+        {
+            Debug.LogWarning(
+                $"[GhostBuildManager] Ghost layer failed to place preview for {blockData.GetItemID()} at {worldPosition}."
+            );
+        }
+
+        if (!placementResult.Success)
+            Debug.Log(placementResult.ToString());
+
+        hasGhost = true;
+    }
+
+    private void OnGhostTilePlaced(
+        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
+        MapBlockData data
+    )
+    {
+        if (data == null)
+            return;
+
+        if (data.mapBlockType != MapBlockType.GameObject)
+            return;
+
+        if (!TryGetFirstCell(cells, out Vector2Int anchorTile, out Vector2Int anchorSubtile))
+            return;
+
+        Vector2 worldPosition = ghostLayerLogic.SubtileToWorldPosition(anchorTile, anchorSubtile);
+
+        GameObject prefab = WorldMapManager.Instance.blockLibrary
+            .GetMapBlockData(data.GetItemID())
+            ?.gameObject;
+
+        if (prefab == null)
+        {
+            Debug.LogError($"[GhostBuildManager] Prefab id={data.GetItemID()} not found.");
+            return;
+        }
+
+        GameObject ghostObject = Instantiate(prefab, worldPosition, Quaternion.identity);
+
+        PrepareGhostObject(ghostObject);
+
+        foreach (Vector2Int tileAnchor in cells.Keys)
+        {
+            ghostLayerGraphics.BindObject(
+                tileAnchor,
+                cells[tileAnchor].ToList(),
+                ghostObject,
+                "ghostBlock"
+            );
+        }
+    }
+
+    private void PrepareGhostObject(GameObject ghostObject)
+    {
+        ghostObject.tag = "Ghost";
+
+        SpriteRenderer[] renderers = ghostObject.GetComponentsInChildren<SpriteRenderer>(true);
+
+        foreach (SpriteRenderer renderer in renderers)
+        {
+            renderer.color = currentColor;
+        }
+
+        Collider2D[] colliders = ghostObject.GetComponentsInChildren<Collider2D>(true);
+
+        foreach (Collider2D collider in colliders)
+        {
+            collider.enabled = false;
+        }
+
+        Rigidbody2D[] rigidbodies = ghostObject.GetComponentsInChildren<Rigidbody2D>(true);
+
+        foreach (Rigidbody2D rb in rigidbodies)
+        {
+            rb.simulated = false;
+        }
+
+        MonoBehaviour[] behaviours = ghostObject.GetComponentsInChildren<MonoBehaviour>(true);
+
+        foreach (MonoBehaviour behaviour in behaviours)
+        {
+            if (behaviour is SpriteRenderer)
+                continue;
+
+            if (behaviour == null)
+                continue;
+
+            // Keep visual-only components enabled if needed.
+            // Disable gameplay scripts so ghost does not behave like real object.
+            if (behaviour.GetType() == typeof(Transform))
+                continue;
+
+            behaviour.enabled = false;
+        }
+    }
+
+    private bool TryGetFirstCell(
+        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
+        out Vector2Int tile,
+        out Vector2Int subtile
+    )
+    {
+        foreach (var pair in cells)
+        {
+            foreach (Vector2Int localSubtile in pair.Value)
+            {
+                tile = pair.Key;
+                subtile = localSubtile;
+                return true;
+            }
+        }
+
+        tile = default;
+        subtile = default;
+        return false;
+    }
+
+    private void ResetLastPosition()
+    {
+        lastAnchorPoint = InvalidCell;
+        lastSubtilePoint = InvalidCell;
+    }
+}
 }
