@@ -1,84 +1,128 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using Unity.Netcode;
+﻿using Unity.Netcode;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(NetworkObject))] // чтобы был доступен на сервере как сетевой сервис
 public class LootSpawnerManager : NetworkBehaviour
 {
     public static LootSpawnerManager Instance { get; private set; }
+
     public GameObject lootPrefab;
 
     [Header("Scatter")]
-    [SerializeField, Tooltip("Максимальный радиус разлёта от центра клетки")]
+    [SerializeField, Tooltip("Maximum scatter radius from block center")]
     private float scatterRadius = 0.45f;
 
-    [SerializeField, Tooltip("Случайный поворот лута при спавне")]
+    [SerializeField, Tooltip("Random loot rotation on spawn")]
     private bool randomRotation = true;
 
-    private void Awake() => Instance = this;
+    private bool IsOnlineMode
+    {
+        get
+        {
+            return NetworkManager.Singleton != null &&
+                   NetworkManager.Singleton.IsListening;
+        }
+    }
 
-    /// <summary>
-    /// Вызови это на СЕРВЕРЕ, когда блок/объект окончательно сломан.
-    /// </summary>
+    private bool CanSpawnAuthoritatively
+    {
+        get
+        {
+            if (!IsOnlineMode)
+                return true;
+
+            return IsServer;
+        }
+    }
+
+    private void Awake()
+    {
+        Instance = this;
+    }
+
     public void SpawnLootForBlock(MapBlockData data, Vector2 position, int? seed = null)
     {
-        if (!IsServer) return;
-        if (data == null || data.loot == null || data.loot.Count == 0) return;
+        if (!CanSpawnAuthoritatively)
+            return;
 
-        //var basePos = AnchorToWorld(anchor);
-        var basePos = (Vector3)position;
-        var rng = seed.HasValue ? new System.Random(seed.Value) : new System.Random(CombineHash(position, Time.frameCount));
+        if (data == null || data.loot == null || data.loot.Count == 0)
+            return;
+
+        if (lootPrefab == null)
+        {
+            Debug.LogError("[LootSpawner] lootPrefab is missing.");
+            return;
+        }
+
+        Vector3 basePos = position;
+        var rng = seed.HasValue
+            ? new System.Random(seed.Value)
+            : new System.Random(CombineHash(position, Time.frameCount));
 
         foreach (var rule in data.loot)
         {
-            if (rng.NextDouble()*100 > rule.chance) continue;
+            if (rule.item == null)
+                continue;
 
-            int count = Mathf.Clamp(UnityEngine.Random.Range(rule.min, rule.max + 1), 1, 100);
-            // Равномерный угловой шаг + случайный старт → меньше «слипаний»
+            if (rng.NextDouble() * 100 > rule.chance)
+                continue;
+
+            int count = Mathf.Clamp(Random.Range(rule.min, rule.max + 1), 1, 100);
+
             float angle = (float)(rng.NextDouble() * Mathf.PI * 2.0);
-            float golden = 2.39996323f; // золотой угол ~137.5° в радианах
+            float golden = 2.39996323f;
 
             for (int i = 0; i < count; i++)
             {
-                angle += golden + (float)rng.NextDouble() * 0.15f; // немного шума
-                float r = Mathf.Sqrt((float)rng.NextDouble()) * scatterRadius;
-                var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * r;
+                angle += golden + (float)rng.NextDouble() * 0.15f;
 
-                var pos = basePos + new Vector3(offset.x, offset.y, 0f);
-                GameObject lootObject= SpawnOne(lootPrefab, pos, randomRotation ? UnityEngine.Random.rotationUniform : Quaternion.identity);
-                lootObject.GetComponent<LootObject>().InitServer(rule.item.GetItemID(), 1);
+                float r = Mathf.Sqrt((float)rng.NextDouble()) * scatterRadius;
+                Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * r;
+
+                Vector3 spawnPos = basePos + new Vector3(offset.x, offset.y, 0f);
+                Quaternion rotation = randomRotation ? Random.rotationUniform : Quaternion.identity;
+
+                GameObject lootObject = SpawnOne(lootPrefab, spawnPos, rotation);
+
+                if (lootObject == null)
+                    continue;
+
+                LootObject loot = lootObject.GetComponent<LootObject>();
+
+                if (loot == null)
+                {
+                    Debug.LogError("[LootSpawner] Spawned loot object has no LootObject component.");
+                    continue;
+                }
+
+                if (IsOnlineMode)
+                    loot.InitServer(rule.item.GetItemID(), 1);
+                else
+                    loot.InitOffline(rule.item.GetItemID(), 1);
             }
         }
     }
 
     private GameObject SpawnOne(GameObject prefab, Vector3 pos, Quaternion rot)
     {
-        if (prefab.TryGetComponent<NetworkObject>(out _))
-        {
-            var go = Instantiate(prefab, pos, rot);
-            var no = go.GetComponent<NetworkObject>();
-            no.Spawn(true);
-            return no.gameObject;
-            // лёгкая «анимация разлёта» если нет на префабе
-            /*            if (!go.TryGetComponent<LootFloater>(out _))
-                            go.AddComponent<LootFloater>();*/
-        }
-        else
-        {
-            // Fallback: лут без NetworkObject (не рекомендуется).
-            // Можно разослать как netless через WorldMapManager:
-            // WorldMapManager.Instance.SpawnNetlessLootForAll(itemId, pos, ...);
-            return null;
-            Debug.LogWarning($"[LootSpawner] Prefab '{prefab.name}' не имеет NetworkObject. " +
-                             $"Лут не будет виден/подобран синхронно без доп. RPC.");
-        }
-    }
+        GameObject go = Instantiate(prefab, pos, rot);
 
-    private static Vector3 AnchorToWorld(Vector2Int anchor) =>
-        new Vector3(anchor.x + 0.5f, anchor.y + 0.5f, 0f);
+        if (IsOnlineMode)
+        {
+            NetworkObject networkObject = go.GetComponent<NetworkObject>();
+
+            if (networkObject == null)
+            {
+                Debug.LogError($"[LootSpawner] Online loot prefab '{prefab.name}' needs NetworkObject.");
+                Destroy(go);
+                return null;
+            }
+
+            networkObject.Spawn(true);
+        }
+
+        return go;
+    }
 
     private static int CombineHash(Vector2 a, int b)
     {
@@ -86,8 +130,8 @@ public class LootSpawnerManager : NetworkBehaviour
         {
             int hx = a.x.GetHashCode();
             int hy = a.y.GetHashCode();
+
             return (hx * 73856093) ^ (hy * 19349663) ^ (b * 83492791);
         }
     }
-
 }

@@ -1,17 +1,39 @@
-using Sirenix.OdinInspector;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 [ExecuteInEditMode]
 public class TestScript : MonoBehaviour
 {
-    [SerializeField] WorldMapManager mapManager;
-    [Space]
-    [InlineButton("SetTile","SetTile")] public Vector2Int tilePos; public MapBlockData mapBlockData; 
+    [SerializeField] float rotationSpeed = 10f;
+    [SerializeField] float range = 10f;
 
-    public void SetTile()
+    [SerializeField] float currentAngle;
+    [SerializeField] float targetAngle = 60f;
+
+    void Update()
     {
-        mapManager.SetTileRequestServerRpc(tilePos, mapBlockData.GetItemID());
+        currentAngle += rotationSpeed * Time.deltaTime;
+
+        if (currentAngle >= 100f)
+            currentAngle = 0f;
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            IsSuccess();
+        }
+    }
+
+    private void IsSuccess()
+    {
+        float distance = Mathf.Abs(currentAngle - targetAngle);
+        distance = Mathf.Min(distance, 100f - distance);
+
+        if (distance <= range)
+        {
+            print("Success");
+        }
+        else
+        {
+            print("Lose");
+        }
     }
 }
