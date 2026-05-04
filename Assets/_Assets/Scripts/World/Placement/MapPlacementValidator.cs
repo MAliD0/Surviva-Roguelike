@@ -1,5 +1,3 @@
-namespace World
-{
 using UnityEngine;
 
 public class MapPlacementValidator
@@ -30,7 +28,7 @@ public class MapPlacementValidator
         if (blockLibrary == null)
         {
             return PlacementResult.Fail(
-                PlacementFailReason.MissingBlockData,
+                PlacementFailReason.MissingBlockLibrary,
                 "MapBlockDataLibrary reference is missing."
             );
         }
@@ -151,4 +149,3 @@ public class MapPlacementValidator
         return PlacementResult.Ok();
     }
 }    
-}

@@ -1,5 +1,3 @@
-namespace World
-{
     public readonly struct PlacementResult
     {
         public bool Success { get; }
@@ -42,5 +40,4 @@ namespace World
             return $"Placement failed: {Reason}. {Message}";
         }
     }
-}
 

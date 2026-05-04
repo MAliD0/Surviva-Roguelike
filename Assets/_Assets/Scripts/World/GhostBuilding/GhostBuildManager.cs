@@ -1,7 +1,3 @@
-namespace World
-{
-    
-
 using System.Collections.Generic;
 using System.Linq;
 using Sirenix.OdinInspector;
@@ -204,8 +200,15 @@ public class GhostBuildManager : MonoBehaviour
 
     private void PrepareGhostObject(GameObject ghostObject)
     {
-        ghostObject.tag = "Ghost";
-
+        try
+        {
+            ghostObject.tag = "Ghost";
+        }
+        catch
+        {
+            Debug.LogWarning("[GhostBuildManager] Tag 'Ghost' does not exist. Add it in Unity Tags or remove this assignment.");
+        }
+        
         SpriteRenderer[] renderers = ghostObject.GetComponentsInChildren<SpriteRenderer>(true);
 
         foreach (SpriteRenderer renderer in renderers)
@@ -231,15 +234,7 @@ public class GhostBuildManager : MonoBehaviour
 
         foreach (MonoBehaviour behaviour in behaviours)
         {
-            if (behaviour is SpriteRenderer)
-                continue;
-
             if (behaviour == null)
-                continue;
-
-            // Keep visual-only components enabled if needed.
-            // Disable gameplay scripts so ghost does not behave like real object.
-            if (behaviour.GetType() == typeof(Transform))
                 continue;
 
             behaviour.enabled = false;
@@ -272,5 +267,4 @@ public class GhostBuildManager : MonoBehaviour
         lastAnchorPoint = InvalidCell;
         lastSubtilePoint = InvalidCell;
     }
-}
 }

@@ -1,7 +1,4 @@
-﻿namespace World
-{
-    
-using AYellowpaper.SerializedCollections;
+﻿using AYellowpaper.SerializedCollections;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
@@ -1192,5 +1189,4 @@ public class WorldMapManager : NetworkBehaviour
         boatLayer.LayerTiles.Clear();
         foreLayer.LayerTiles.Clear();
     }
-}
 }

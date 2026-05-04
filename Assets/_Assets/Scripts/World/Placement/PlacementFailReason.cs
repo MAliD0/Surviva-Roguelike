@@ -1,10 +1,9 @@
-namespace World
-{
     public enum PlacementFailReason
     {
         None,
 
         MissingBlockData,
+        MissingBlockLibrary,
         MissingTargetLayer,
 
         OutOfBounds,
@@ -14,4 +13,3 @@ namespace World
 
         LayerRejected
     }
-}
