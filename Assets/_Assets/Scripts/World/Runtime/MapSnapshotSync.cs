@@ -123,34 +123,27 @@ public class MapSnapshotSync : NetworkBehaviour
         if (sendNetworkedBindSnapshot)
         {
             int sent = 0;
-            foreach (var layerPair in world._anchorToNetId) // MapLayerType -> (anchor -> netId)
+            foreach (NetworkObjectRegistryEntry entry in world.GetNetworkObjectRegistryEntries())
             {
-                var layer = layerPair.Key;
-                var logic = world.GetLayer(layer);
-                if (logic == null) continue;
+                MapLayerType layer = entry.Layer;
+                MapLayerLogic logic = world.GetLayer(layer);
 
-                foreach (var kv in layerPair.Value)
-                {
-                    var anchor = kv.Key;
-                    var netId = kv.Value;
+                if (logic == null)
+                    continue;
 
-                    // восстановим список клеток группы по anchor + tileOffsets
-                    var tile = logic.GetMapTile(anchor);
-                    if (tile?.BlockData == null) continue;
+                MapTile tile = logic.GetMapTile(entry.TileAnchor, entry.SubtileAnchor);
 
-                    //Vector2Int[] cells;
-                    //if (tileIndex.BlockData.isMultiblock)
-                    //{
-                    //    var offs = tileIndex.BlockData.tileOffsets;
-                    //    cells = new Vector2Int[offs.Count-1];
-                    //    for (int i = 0; i < offs.Count - 1; i++) cells[i] = anchor + offs[i];
-                    //}
-                    //else cells = new[] { anchor };
+                if (tile?.BlockData == null)
+                    continue;
 
-                    //BindObjectByNetIdClientRpc(ToV2IArray(cells), netId, layer, target);
+                ulong netId = entry.NetworkObjectId;
 
-                    if (++sent % 200 == 0) yield return null; // не душим транспорт
-                }
+                // Binding is still commented out in your current file.
+                // Later, when we finish binding snapshot, use entry.TileAnchor / entry.SubtileAnchor
+                // to reconstruct occupied cells.
+
+                if (++sent % 200 == 0)
+                    yield return null;
             }
         }
     }

@@ -1,5 +1,4 @@
-﻿using AYellowpaper.SerializedCollections;
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,42 +58,18 @@ public class WorldMapManager : NetworkBehaviour
 
     private MapPlacementValidator placementValidator;
     private WorldMapService worldMapService;
+    private MapObjectRegistry mapObjectRegistry;
 
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
 
-    [FoldoutGroup("Server References")]
-    [SerializeField]
-    public SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, ulong>>> _anchorToNetId =
-        new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, ulong>>>();
-
-    [FoldoutGroup("Server References")]
-    [SerializeField]
-    private SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, string>>> _anchorToNetlessId =
-        new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, string>>>();
-
-    [FoldoutGroup("Server References")]
-    [SerializeField]
-    private SerializedDictionary<string, NetlessEntry> _netlessRegistry =
-        new SerializedDictionary<string, NetlessEntry>();
-
     private bool authoritativeEventsSubscribed = false;
 
-    [Serializable]
-    public struct NetlessEntry
-    {
-        public MapLayerType layer;
-        public Vector2Int anchor;
-        public Vector2Int localAnchor;
-        public List<DictEntry> occupiedTiles;
-        public string itemId;
-        public Vector3 pos;
-    }
 
-    public Dictionary<string, NetlessEntry> GetNetlessRegistry()
-    {
-        return _netlessRegistry;
-    }
 
+    public Dictionary<string, MapObjectRegistry.NetlessEntry> GetNetlessRegistry()
+    {
+        return mapObjectRegistry.GetNetlessRegistry();
+    }
     private bool IsOnlineMode
     {
         get
@@ -131,7 +106,7 @@ public class WorldMapManager : NetworkBehaviour
     {
         CreateLayers();
         InitGraphics();
-        InitRegistries();
+        InitObjectRegistry();
         InitPlacementValidator();
         InitWorldMapService();
 
@@ -273,11 +248,9 @@ public class WorldMapManager : NetworkBehaviour
         onBoatLayerGraphics.Init(onBoatLayer);
     }
 
-    private void InitRegistries()
+    private void InitObjectRegistry()
     {
-        _netlessRegistry = new SerializedDictionary<string, NetlessEntry>();
-        _anchorToNetId = new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, ulong>>>();
-        _anchorToNetlessId = new SerializedDictionary<MapLayerType, SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, string>>>();
+        mapObjectRegistry = new MapObjectRegistry(GetLayer);
     }
 
     private void InitPlacementValidator()
@@ -577,15 +550,14 @@ public class WorldMapManager : NetworkBehaviour
 
         var serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
 
-        if (TryFindRegisteredNetId(layer, cells, out var registeredTile, out var registeredSubtile, out ulong networkId))
-        {
+        if (mapObjectRegistry.TryFindNetworkObject(layer, cells, out var registeredTile, out var registeredSubtile, out ulong networkId))        {
             if (NetworkManager.Singleton != null &&
                 NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkId, out var networkObject))
             {
                 networkObject.Despawn(true);
             }
 
-            RemoveRegisteredNetId(layer, registeredTile, registeredSubtile);
+            mapObjectRegistry.RemoveNetworkObject(layer, registeredTile, registeredSubtile);
 
             if (IsOnlineMode)
                 BindObjectByNetIdClientRpc(serializedCells, 0, layer);
@@ -595,9 +567,9 @@ public class WorldMapManager : NetworkBehaviour
             return;
         }
 
-        if (TryFindRegisteredNetlessId(layer, cells, out var netlessTile, out var netlessSubtile, out string id))
+        if (mapObjectRegistry.TryFindNetlessObject(layer, cells, out var netlessTile, out var netlessSubtile, out string id))
         {
-            RemoveRegisteredNetlessId(layer, netlessTile, netlessSubtile, id);
+            mapObjectRegistry.RemoveNetlessObject(layer, netlessTile, netlessSubtile, id);
 
             if (IsOnlineMode)
                 RemoveNetlessClientRpc(id, layer);
@@ -638,8 +610,8 @@ public class WorldMapManager : NetworkBehaviour
         var go = Instantiate(prefab, worldPos, Quaternion.identity);
         string id = "offline_" + NewId();
 
-        RegisterNetlessObject(layer, cells, id, data.GetItemID(), worldPos);
-
+        mapObjectRegistry.RegisterNetlessObject(layer, cells, id, data.GetItemID(), worldPos);
+        
         foreach (Vector2Int anchor in cells.Keys)
         {
             GetGraphics(layer).BindObject(anchor, cells[anchor].ToList(), go, id);
@@ -676,16 +648,16 @@ public class WorldMapManager : NetworkBehaviour
 
             networkObject.Spawn();
 
-            RegisterNetObject(layer, cells, networkObject.NetworkObjectId);
-
+            mapObjectRegistry.RegisterNetworkObject(layer, cells, networkObject.NetworkObjectId);
+            
             BindObjectByNetIdClientRpc(serializedCells, networkObject.NetworkObjectId, layer);
         }
         else
         {
             string id = NewId();
 
-            RegisterNetlessObject(layer, cells, id, data.GetItemID(), worldPos);
-
+            mapObjectRegistry.RegisterNetlessObject(layer, cells, id, data.GetItemID(), worldPos);
+            
             SpawnNetlessClientRpc(
                 layer,
                 data.GetItemID(),
@@ -801,184 +773,6 @@ public class WorldMapManager : NetworkBehaviour
     }
 
     // =========================================================
-    // Registry helpers
-    // =========================================================
-
-    private void RegisterNetObject(
-        MapLayerType layer,
-        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
-        ulong networkObjectId
-    )
-    {
-        if (!TryGetPlacedAnchor(layer, cells, out var tileAnchor, out var subtileAnchor))
-            return;
-
-        if (!_anchorToNetId.TryGetValue(layer, out var layerDict))
-        {
-            layerDict = new SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, ulong>>();
-            _anchorToNetId[layer] = layerDict;
-        }
-
-        if (!layerDict.TryGetValue(tileAnchor, out var subtileDict))
-        {
-            subtileDict = new SerializedDictionary<Vector2Int, ulong>();
-            layerDict[tileAnchor] = subtileDict;
-        }
-
-        subtileDict[subtileAnchor] = networkObjectId;
-    }
-
-    private void RegisterNetlessObject(
-        MapLayerType layer,
-        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
-        string id,
-        string itemId,
-        Vector3 worldPos
-    )
-    {
-        if (!TryGetPlacedAnchor(layer, cells, out var tileAnchor, out var subtileAnchor))
-            return;
-
-        if (!_anchorToNetlessId.TryGetValue(layer, out var layerDict))
-        {
-            layerDict = new SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, string>>();
-            _anchorToNetlessId[layer] = layerDict;
-        }
-
-        if (!layerDict.TryGetValue(tileAnchor, out var subtileDict))
-        {
-            subtileDict = new SerializedDictionary<Vector2Int, string>();
-            layerDict[tileAnchor] = subtileDict;
-        }
-
-        subtileDict[subtileAnchor] = id;
-
-        _netlessRegistry[id] = new NetlessEntry
-        {
-            layer = layer,
-            anchor = tileAnchor,
-            localAnchor = subtileAnchor,
-            occupiedTiles = DictEntry.SerializeDictionary(cells),
-            itemId = itemId,
-            pos = worldPos
-        };
-    }
-
-    private bool TryFindRegisteredNetId(
-        MapLayerType layer,
-        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
-        out Vector2Int registeredTile,
-        out Vector2Int registeredSubtile,
-        out ulong networkId
-    )
-    {
-        registeredTile = default;
-        registeredSubtile = default;
-        networkId = 0;
-
-        if (!_anchorToNetId.TryGetValue(layer, out var layerDict))
-            return false;
-
-        foreach (var tilePair in cells)
-        {
-            if (!layerDict.TryGetValue(tilePair.Key, out var subtileDict))
-                continue;
-
-            foreach (Vector2Int subtile in tilePair.Value)
-            {
-                if (subtileDict.TryGetValue(subtile, out networkId))
-                {
-                    registeredTile = tilePair.Key;
-                    registeredSubtile = subtile;
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private bool TryFindRegisteredNetlessId(
-        MapLayerType layer,
-        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
-        out Vector2Int registeredTile,
-        out Vector2Int registeredSubtile,
-        out string id
-    )
-    {
-        registeredTile = default;
-        registeredSubtile = default;
-        id = null;
-
-        if (!_anchorToNetlessId.TryGetValue(layer, out var layerDict))
-            return false;
-
-        foreach (var tilePair in cells)
-        {
-            if (!layerDict.TryGetValue(tilePair.Key, out var subtileDict))
-                continue;
-
-            foreach (Vector2Int subtile in tilePair.Value)
-            {
-                if (subtileDict.TryGetValue(subtile, out id))
-                {
-                    registeredTile = tilePair.Key;
-                    registeredSubtile = subtile;
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private void RemoveRegisteredNetId(
-        MapLayerType layer,
-        Vector2Int tile,
-        Vector2Int subtile
-    )
-    {
-        if (!_anchorToNetId.TryGetValue(layer, out var layerDict))
-            return;
-
-        if (!layerDict.TryGetValue(tile, out var subtileDict))
-            return;
-
-        subtileDict.Remove(subtile);
-
-        if (subtileDict.Count == 0)
-            layerDict.Remove(tile);
-
-        if (layerDict.Count == 0)
-            _anchorToNetId.Remove(layer);
-    }
-
-    private void RemoveRegisteredNetlessId(
-        MapLayerType layer,
-        Vector2Int tile,
-        Vector2Int subtile,
-        string id
-    )
-    {
-        if (_anchorToNetlessId.TryGetValue(layer, out var layerDict))
-        {
-            if (layerDict.TryGetValue(tile, out var subtileDict))
-            {
-                subtileDict.Remove(subtile);
-
-                if (subtileDict.Count == 0)
-                    layerDict.Remove(tile);
-            }
-
-            if (layerDict.Count == 0)
-                _anchorToNetlessId.Remove(layer);
-        }
-
-        if (!string.IsNullOrEmpty(id))
-            _netlessRegistry.Remove(id);
-    }
-
-    // =========================================================
     // Late join sync
     // =========================================================
 
@@ -995,7 +789,7 @@ public class WorldMapManager : NetworkBehaviour
             }
         };
 
-        foreach (var kv in _netlessRegistry)
+        foreach (var kv in mapObjectRegistry.GetNetlessRegistry())
         {
             var entry = kv.Value;
 
@@ -1089,6 +883,14 @@ public class WorldMapManager : NetworkBehaviour
         }
     }
 
+    public IEnumerable<NetworkObjectRegistryEntry> GetNetworkObjectRegistryEntries()
+    {
+        if (mapObjectRegistry == null)
+            return Array.Empty<NetworkObjectRegistryEntry>();
+
+        return mapObjectRegistry.GetNetworkObjectEntries();
+    }
+
     // =========================================================
     // Utility / testing
     // =========================================================
@@ -1111,7 +913,9 @@ public class WorldMapManager : NetworkBehaviour
 
         CreateLayers();
         InitGraphics();
-        InitRegistries();
+        InitObjectRegistry();
+        InitPlacementValidator();
+        InitWorldMapService();
 
         if (runMode == WorldMapRunMode.Offline || IsServer)
             SubscribeAuthoritativeLayerEvents();
