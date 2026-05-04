@@ -1287,12 +1287,6 @@ MonoBehaviour:
       _serializedList: []
     anchorHp:
       _serializedList: []
-  _anchorToNetId:
-    _serializedList: []
-  _anchorToNetlessId:
-    _serializedList: []
-  _netlessRegistry:
-    _serializedList: []
 --- !u!114 &250896769
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1375,10 +1369,12 @@ MonoBehaviour:
       _serializedList: []
   ghostLayerGraphics: {fileID: 988140341}
   possiblePlacementColor: {r: 0.3623484, g: 0.8584906, b: 0.26321647, a: 0.50980395}
-  unpossiblePlacementColor: {r: 0.7830189, g: 0.19575472, b: 0.19575472, a: 0.50980395}
+  impossiblePlacementColor: {r: 1, g: 0, b: 0, a: 0.5}
   currentColor: {r: 0, g: 0, b: 0, a: 0}
   lastAnchorPoint: {x: 0, y: 0}
   lastSubtilePoint: {x: 0, y: 0}
+  lastFailReason: 0
+  lastFailMessage: 
 --- !u!114 &250896774
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3103,12 +3099,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 988140335}
+  - component: {fileID: 988140340}
   - component: {fileID: 988140338}
   - component: {fileID: 988140337}
   - component: {fileID: 988140339}
   - component: {fileID: 988140342}
   - component: {fileID: 988140341}
-  - component: {fileID: 988140340}
   m_Layer: 0
   m_Name: MapHolder
   m_TagString: Untagged

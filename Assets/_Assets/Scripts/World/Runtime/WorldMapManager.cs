@@ -59,6 +59,7 @@ public class WorldMapManager : NetworkBehaviour
     private MapPlacementValidator placementValidator;
     private WorldMapService worldMapService;
     private MapObjectRegistry mapObjectRegistry;
+    private MapObjectSpawner mapObjectSpawner;
 
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
 
@@ -109,6 +110,7 @@ public class WorldMapManager : NetworkBehaviour
         InitObjectRegistry();
         InitPlacementValidator();
         InitWorldMapService();
+        InitObjectSpawner();
 
         if (runMode == WorldMapRunMode.Offline)
         {
@@ -161,6 +163,16 @@ public class WorldMapManager : NetworkBehaviour
             blockLibrary,
             placementValidator,
             GetLayer
+        );
+    }
+    private void InitObjectSpawner()
+    {
+        mapObjectSpawner = new MapObjectSpawner(
+            blockLibrary,
+            mapObjectRegistry,
+            GetLayer,
+            GetGraphics,
+            NewId
         );
     }
     private void SubscribeNetworkCallbacks()
@@ -533,7 +545,7 @@ public class WorldMapManager : NetworkBehaviour
         if (IsOnlineMode)
             SpawnPlacedObjectOnline(layer, cells, data);
         else
-            SpawnPlacedObjectOffline(layer, cells, data);
+            mapObjectSpawner.SpawnPlacedObjectOffline(layer, cells, data);
     }
 
     private void OnAuthoritativeTileRemoved(
@@ -588,35 +600,6 @@ public class WorldMapManager : NetworkBehaviour
     // =========================================================
     // Object spawning
     // =========================================================
-
-    private void SpawnPlacedObjectOffline(
-        MapLayerType layer,
-        Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
-        MapBlockData data
-    )
-    {
-        if (!TryGetPlacedAnchor(layer, cells, out var tileAnchor, out var subtileAnchor))
-            return;
-
-        Vector2 worldPos = GetLayer(layer).SubtileToWorldPosition(tileAnchor, subtileAnchor);
-        var prefab = blockLibrary.GetMapBlockData(data.GetItemID())?.gameObject;
-
-        if (!prefab)
-        {
-            Debug.LogError($"[SpawnPlacedObjectOffline] Prefab id={data.GetItemID()} not found");
-            return;
-        }
-
-        var go = Instantiate(prefab, worldPos, Quaternion.identity);
-        string id = "offline_" + NewId();
-
-        mapObjectRegistry.RegisterNetlessObject(layer, cells, id, data.GetItemID(), worldPos);
-        
-        foreach (Vector2Int anchor in cells.Keys)
-        {
-            GetGraphics(layer).BindObject(anchor, cells[anchor].ToList(), go, id);
-        }
-    }
 
     private void SpawnPlacedObjectOnline(
         MapLayerType layer,
@@ -914,6 +897,7 @@ public class WorldMapManager : NetworkBehaviour
         CreateLayers();
         InitGraphics();
         InitObjectRegistry();
+        InitObjectSpawner();
         InitPlacementValidator();
         InitWorldMapService();
 
