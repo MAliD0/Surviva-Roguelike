@@ -164,7 +164,6 @@ public class MapSnapshotSync : NetworkBehaviour
     private void ApplyTileSnapshotChunkClientRpc(TileSnapshotEntry[] chunk, bool isLast, ClientRpcParams p = default)
     {
         if (world == null || blockLibrary == null) return;
-        print("Enter ApplyTileSnapshotChunkClientRpc");
         foreach (var e in chunk)
         {
             var layer = world.GetLayer(e.layer);

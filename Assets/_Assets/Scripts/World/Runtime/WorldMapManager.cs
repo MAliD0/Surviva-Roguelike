@@ -57,7 +57,7 @@ public class WorldMapManager : NetworkBehaviour
     private MapObjectSpawner mapObjectSpawner;
     private WorldMapLayers worldMapLayers;
     private WorldMapLayerEventRouter layerEventRouter;
-
+    private WorldLootService worldLootService;
     
     [SerializeField] private WorldMapNetworkSync networkSync;
 
@@ -114,7 +114,8 @@ public class WorldMapManager : NetworkBehaviour
         InitWorldMapService();
         InitLayerEventRouter();
         InitNetworkSync();
-
+        InitWorldLootService();
+        
         if (runMode == WorldMapRunMode.Offline)
         {
             SubscribeAuthoritativeLayerEvents();
@@ -146,7 +147,10 @@ public class WorldMapManager : NetworkBehaviour
         if (ConnectionManager.instance != null)
             ConnectionManager.instance.onServerActivate -= OnServerActivateEvent;
     }
-
+    private void InitWorldLootService()
+    {
+        worldLootService = new WorldLootService();
+    }
     private void OnServerActivated(bool active)
     {
         if (!active)
@@ -394,9 +398,8 @@ public class WorldMapManager : NetworkBehaviour
         if (!result.Broken)
             return true;
 
-        if (LootSpawnerManager.Instance != null)
-            LootSpawnerManager.Instance.SpawnLootForBlock(result.BlockData, result.WorldPosition);
-
+        worldLootService.SpawnLootForBlock(result.BlockData, result.WorldPosition);
+        
         result.Layer.RemoveTile(result.TileAnchor, result.SubtileAnchor);
 
         if (syncClients)
@@ -422,8 +425,7 @@ public class WorldMapManager : NetworkBehaviour
             return false;
         }
 
-        if (result.BlockData != null && LootSpawnerManager.Instance != null)
-            LootSpawnerManager.Instance.SpawnLootForBlock(result.BlockData, result.WorldPosition);
+        worldLootService.SpawnLootForBlock(result.BlockData, result.WorldPosition);
 
         if (syncClients)
         {
@@ -621,6 +623,8 @@ public class WorldMapManager : NetworkBehaviour
         InitPlacementValidator();
         InitWorldMapService();
         InitNetworkSync();
+
+        InitWorldLootService();
 
         if (runMode == WorldMapRunMode.Offline || IsServer)
             SubscribeAuthoritativeLayerEvents();
