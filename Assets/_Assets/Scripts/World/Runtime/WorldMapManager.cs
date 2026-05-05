@@ -49,8 +49,6 @@ public class WorldMapManager : NetworkBehaviour
     
     [SerializeField] private WorldMapNetworkSync networkSync;
 
-
-    public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
     public MapBlockDataLibrary BlockLibrary => blockLibrary;
     public WorldMapNetworkSync NetworkSync => networkSync;
     
@@ -118,7 +116,6 @@ public class WorldMapManager : NetworkBehaviour
         if (IsOnlineMode && IsServer)
         {
             SubscribeAuthoritativeLayerEvents();
-            SubscribeNetworkCallbacks();
         }
 
         if (!IsOnlineMode)
@@ -148,7 +145,6 @@ public class WorldMapManager : NetworkBehaviour
             return;
 
         SubscribeAuthoritativeLayerEvents();
-        SubscribeNetworkCallbacks();
     }
     private void InitLayerEventRouter()
     {
@@ -200,10 +196,6 @@ public class WorldMapManager : NetworkBehaviour
             boatLayerGraphics,
             onBoatLayerGraphics
         );
-    }
-    private void SubscribeNetworkCallbacks()
-    {
-        // Late-join synchronization is handled by MapSnapshotSync.
     }
 
     private void SubscribeAuthoritativeLayerEvents()
