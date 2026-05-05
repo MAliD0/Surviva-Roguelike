@@ -65,7 +65,9 @@ public class WorldMapManager : NetworkBehaviour
 
     public Action<GameObject, Vector2Int, string, string> onObjectInstantiated;
     public MapBlockDataLibrary BlockLibrary => blockLibrary;
-
+    public WorldMapNetworkSync NetworkSync => networkSync;
+    
+    
     public Dictionary<string, MapObjectRegistry.NetlessEntry> GetNetlessRegistry()
     {
         return mapObjectRegistry.GetNetlessRegistry();
@@ -144,9 +146,6 @@ public class WorldMapManager : NetworkBehaviour
 
         if (ConnectionManager.instance != null)
             ConnectionManager.instance.onServerActivate -= OnServerActivateEvent;
-
-        if (NetworkManager != null)
-            NetworkManager.OnClientConnectedCallback -= OnClientConnectedServer;
     }
 
     private void OnServerActivated(bool active)
@@ -213,11 +212,7 @@ public class WorldMapManager : NetworkBehaviour
     }
     private void SubscribeNetworkCallbacks()
     {
-        if (NetworkManager != null)
-        {
-            NetworkManager.OnClientConnectedCallback -= OnClientConnectedServer;
-            NetworkManager.OnClientConnectedCallback += OnClientConnectedServer;
-        }
+        // Late-join synchronization is handled by MapSnapshotSync.
     }
 
     private void SubscribeAuthoritativeLayerEvents()
@@ -572,38 +567,6 @@ public class WorldMapManager : NetworkBehaviour
     }
 
     // =========================================================
-    // Late join sync
-    // =========================================================
-
-    private void OnClientConnectedServer(ulong clientId)
-    {
-        if (!IsServer)
-            return;
-
-        var target = new ClientRpcParams
-        {
-            Send = new ClientRpcSendParams
-            {
-                TargetClientIds = new[] { clientId }
-            }
-        };
-
-        foreach (var kv in mapObjectRegistry.GetNetlessRegistry())
-        {
-            var entry = kv.Value;
-
-            networkSync.SpawnNetlessClientRpc(
-                entry.layer,
-                entry.itemId,
-                entry.occupiedTiles.ToArray(),
-                entry.pos,
-                kv.Key,
-                target
-            );
-        }
-    }
-
-    // =========================================================
     // Helpers
     // =========================================================
 
@@ -659,7 +622,7 @@ public class WorldMapManager : NetworkBehaviour
         InitPlacementValidator();
         InitWorldMapService();
         InitNetworkSync();
-        
+
         if (runMode == WorldMapRunMode.Offline || IsServer)
             SubscribeAuthoritativeLayerEvents();
     }

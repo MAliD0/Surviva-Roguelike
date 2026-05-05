@@ -15,8 +15,8 @@ public class MapSnapshotSync : NetworkBehaviour
     [SerializeField] private MapBlockDataLibrary blockLibrary;
 
     [Header("Chunk sizes")]
-    [SerializeField] private int tileChunkSize = 800;
-    [SerializeField] private int netlessChunkSize = 300;
+    [SerializeField] private int tileChunkSize = 80;
+    [SerializeField] private int netlessChunkSize = 30;
 
     [Header("Options")]
     [Tooltip("Присылать биндинг сетевых GO (если нет биндера на префабах)")]
@@ -40,27 +40,6 @@ public class MapSnapshotSync : NetworkBehaviour
             s.SerializeValue(ref anchor);
             s.SerializeValue(ref localAnchor);
             s.SerializeValue(ref hp);
-        }
-    }
-
-    [Serializable]
-    public struct NetlessSnapshotEntry : INetworkSerializable
-    {
-        public MapLayerType layer;
-        public string itemId;
-        public V2I anchor;       // tileIndex anchor
-        public V2I localAnchor;  // new: subtile local anchor inside the tileIndex
-        public Vector3 pos;
-        public string id; // stable server id
-
-        public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
-        {
-            s.SerializeValue(ref layer);
-            s.SerializeValue(ref itemId);
-            s.SerializeValue(ref anchor);
-            s.SerializeValue(ref localAnchor);
-            s.SerializeValue(ref pos);
-            s.SerializeValue(ref id);
         }
     }
 
@@ -106,17 +85,38 @@ public class MapSnapshotSync : NetworkBehaviour
             var slice = tiles.GetRange(i, Mathf.Min(tileChunkSize, tiles.Count - i)).ToArray();
             var isLast = (i + tileChunkSize) >= tiles.Count;
             ApplyTileSnapshotChunkClientRpc(slice, isLast, target);
-            yield return null;
+            yield return new WaitForSeconds(0.03f);
         }
 
-        // 2) Нетворк-лесс GO чанками
-        var netless = BuildNetlessSnapshot();
-        for (int i = 0; i < netless.Count; i += netlessChunkSize)
+        // 2) Netless objects in chunks.
+        // Reuse WorldMapNetworkSync.SpawnNetlessClientRpc because it already knows how
+        // to instantiate and bind netless objects using occupied tile cells.
+        var netlessEntries = new List<KeyValuePair<string, MapObjectRegistry.NetlessEntry>>(
+            world.GetNetlessRegistry()
+        );
+
+        Debug.Log($"[MapSnapshotSync] Netless snapshot count: {netlessEntries.Count}");
+
+        for (int i = 0; i < netlessEntries.Count; i += netlessChunkSize)
         {
-            var slice = netless.GetRange(i, Mathf.Min(netlessChunkSize, netless.Count - i)).ToArray();
-            var isLast = (i + netlessChunkSize) >= netless.Count;
-            SpawnNetlessSnapshotChunkClientRpc(slice, isLast, target);
-            yield return null;
+            int end = Mathf.Min(i + netlessChunkSize, netlessEntries.Count);
+
+            for (int j = i; j < end; j++)
+            {
+                var kv = netlessEntries[j];
+                var entry = kv.Value;
+
+                world.NetworkSync.SpawnNetlessClientRpc(
+                    entry.layer,
+                    entry.itemId,
+                    entry.occupiedTiles.ToArray(),
+                    entry.pos,
+                    kv.Key,
+                    target
+                );
+            }
+
+            yield return new WaitForSeconds(0.03f);
         }
 
         // 3) Сетевые GO — биндинг (если не используете Binder на префабах)
@@ -143,7 +143,7 @@ public class MapSnapshotSync : NetworkBehaviour
                 // to reconstruct occupied cells.
 
                 if (++sent % 200 == 0)
-                    yield return null;
+                    yield return new WaitForSeconds(0.03f);
             }
         }
     }
@@ -181,25 +181,6 @@ public class MapSnapshotSync : NetworkBehaviour
         return result;
     }
 
-    private List<NetlessSnapshotEntry> BuildNetlessSnapshot()
-    {
-        var list = new List<NetlessSnapshotEntry>();
-        foreach (var kv in world.GetNetlessRegistry()) // string id -> NetlessEntry
-        {
-            var id = kv.Key;
-            var e = kv.Value;
-            list.Add(new NetlessSnapshotEntry
-            {
-                id = id,             // ВАЖНО: id = key
-                layer = e.layer,
-                itemId = e.itemId,       // itemId из записи
-                anchor = e.anchor,
-                pos = e.pos
-            });
-        }
-        return list;
-    }
-
     private static V2I[] ToV2IArray(Vector2Int[] arr)
     {
         var res = new V2I[arr.Length];
@@ -220,35 +201,20 @@ public class MapSnapshotSync : NetworkBehaviour
             if (layer == null || data == null) continue;
 
             // идемпотентность
-            if (!layer.IsTilePresented(e.anchor.ToVector2Int()))
-                layer.PlaceBlock(e.anchor.ToVector2Int(), data);
+            if (!layer.IsSubTilePresented(e.anchor.ToVector2Int(), e.localAnchor.ToVector2Int()))
+            {
+                layer.PlaceBlock(
+                    e.anchor.ToVector2Int(),
+                    e.localAnchor.ToVector2Int(),
+                    data
+                );
+            }
 
             if (data.breakable)
                 layer.SetHealth(e.anchor, e.localAnchor,data, e.hp, true);
         }
     }
 
-    [ClientRpc]
-    private void SpawnNetlessSnapshotChunkClientRpc(NetlessSnapshotEntry[] chunk, bool isLast, ClientRpcParams p = default)
-    {
-        if (world == null || blockLibrary == null) return;
-
-        foreach (var e in chunk)
-        {
-            var data = blockLibrary.GetMapBlockData(e.itemId);
-            if (data == null || data.gameObject == null) continue;
-
-            var go = Instantiate(data.gameObject, e.pos, Quaternion.identity);
-
-            // восстановим клетки группы (anchor + offsets)
-            
-            //var cells = new List<Vector2Int>();
-            //if (data.isMultiblock) foreach (var off in data.tileOffsets) cells.Add(e.anchor + off);
-            //else cells.Add(e.anchor);
-
-            //world.GetGraphics(e.layer).BindObject(cells, go, e.id);
-        }
-    }
 
     [ClientRpc]
     private void BindObjectByNetIdClientRpc(V2I[] cellsV2I, ulong netId, MapLayerType layer, ClientRpcParams p = default)
