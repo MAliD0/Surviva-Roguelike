@@ -8,7 +8,6 @@ public class PlayerManager : NetworkBehaviour
     [SerializeField] private PlayerAnimationController playerAnimationController;
     [SerializeField] private PlayerInputManager playerInputManager;
     [SerializeField] private PlayerInteractionManager playerInteractionManager;
-    [SerializeField] private PlayerCraftingManager playerCraftingManager;
 
     [SerializeField] private Inventory inventory;
     [SerializeField] private DSManager dsManager;
@@ -203,11 +202,6 @@ public class PlayerManager : NetworkBehaviour
     public void AddItemClientRpc(string itemId, int number, ClientRpcParams rpcParams)
     {
         inventory.AddItem(itemId, number);
-    }
-
-    public void OpenCraftingMenu(List<ItemData> craftableItems)
-    {
-        playerCraftingManager.OpenCraftingMenu(craftableItems);
     }
 
     private bool HasLocalControl
