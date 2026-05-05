@@ -4,18 +4,6 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
-/// <summary>
-/// High-level world map manager.
-/// 
-/// Offline:
-/// - directly modifies local map
-/// - spawns normal local GameObjects
-/// 
-/// Online:
-/// - clients send ServerRpc requests
-/// - server is authoritative
-/// - server syncs map data and object spawns to clients
-/// </summary>
 public class WorldMapManager : NetworkBehaviour
 {
     [Header("Settings")]
@@ -496,29 +484,8 @@ public class WorldMapManager : NetworkBehaviour
             return;
         }
 
-        if (!IsOnlineMode)
-            return;
-
-        if (result.NeedsNetlessRemoveRpc)
-        {
-            networkSync.RemoveNetlessClientRpc(
-                result.NetlessId,
-                result.LayerType
-            );
-
-            return;
-        }
-
-        if (result.NeedsNetworkUnbindByCells)
-        {
-            DictEntry[] serializedCells = DictEntry.SerializeDictionary(cells).ToArray();
-
-            networkSync.BindObjectByNetIdClientRpc(
-                serializedCells,
-                0,
-                result.LayerType
-            );
-        }
+        if (IsOnlineMode)
+            networkSync.SyncObjectRemovalResult(result, cells);
     }
     // =========================================================
     // Object spawning
@@ -545,26 +512,7 @@ public class WorldMapManager : NetworkBehaviour
             return;
         }
 
-        DictEntry[] serializedCells = DictEntry.SerializeDictionary(result.Cells).ToArray();
-
-        if (result.IsNetworkObject)
-        {
-            networkSync.BindObjectByNetIdClientRpc(
-                serializedCells,
-                result.NetworkObjectId,
-                result.LayerType
-            );
-
-            return;
-        }
-
-        networkSync.SpawnNetlessClientRpc(
-            result.LayerType,
-            result.ItemId,
-            serializedCells,
-            result.WorldPosition,
-            result.NetlessId
-        );
+        networkSync.SyncObjectSpawnResult(result);
     }
 
     // =========================================================

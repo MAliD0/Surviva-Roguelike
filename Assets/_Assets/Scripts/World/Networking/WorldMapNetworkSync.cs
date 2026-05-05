@@ -264,4 +264,65 @@ public class WorldMapNetworkSync : NetworkBehaviour
 
         world.GetGraphics(layer).UnbindByCells(cells, destroyNonNetworked);
     }
+
+    public void SyncObjectSpawnResult(MapObjectSpawnResult result)
+    {
+        if (!result.Success)
+            return;
+
+        DictEntry[] serializedCells = DictEntry
+            .SerializeDictionary(result.Cells)
+            .ToArray();
+
+        if (result.IsNetworkObject)
+        {
+            BindObjectByNetIdClientRpc(
+                serializedCells,
+                result.NetworkObjectId,
+                result.LayerType
+            );
+
+            return;
+        }
+
+        SpawnNetlessClientRpc(
+            result.LayerType,
+            result.ItemId,
+            serializedCells,
+            result.WorldPosition,
+            result.NetlessId
+        );
+    }
+
+    public void SyncObjectRemovalResult(
+    MapObjectRemovalResult result,
+    Dictionary<Vector2Int, HashSet<Vector2Int>> cells
+    )
+    {
+        if (!result.Success)
+            return;
+
+        if (result.NeedsNetlessRemoveRpc)
+        {
+            RemoveNetlessClientRpc(
+                result.NetlessId,
+                result.LayerType
+            );
+
+            return;
+        }
+
+        if (result.NeedsNetworkUnbindByCells)
+        {
+            DictEntry[] serializedCells = DictEntry
+                .SerializeDictionary(cells)
+                .ToArray();
+
+            BindObjectByNetIdClientRpc(
+                serializedCells,
+                0,
+                result.LayerType
+            );
+        }
+    }
 }

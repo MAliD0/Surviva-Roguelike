@@ -10,9 +10,9 @@ public class MapSnapshotBuilder
         this.world = world;
     }
 
-    public List<MapSnapshotSync.TileSnapshotEntry> BuildTileSnapshot()
+    public List<TileSnapshotEntry> BuildTileSnapshot()
     {
-        var result = new List<MapSnapshotSync.TileSnapshotEntry>();
+        var result = new List<TileSnapshotEntry>();
 
         AddLayerSnapshot(MapLayerType.backGround, world.GetLayer(MapLayerType.backGround), result);
         AddLayerSnapshot(MapLayerType.foreGround, world.GetLayer(MapLayerType.foreGround), result);
@@ -25,7 +25,7 @@ public class MapSnapshotBuilder
     private void AddLayerSnapshot(
         MapLayerType layerType,
         MapLayerLogic layer,
-        List<MapSnapshotSync.TileSnapshotEntry> result
+        List<TileSnapshotEntry> result
     )
     {
         if (layer == null)
@@ -54,7 +54,7 @@ public class MapSnapshotBuilder
                     ? layer.GetHealth(tileAnchor, subtileAnchor)
                     : 0;
 
-                result.Add(new MapSnapshotSync.TileSnapshotEntry
+                result.Add(new TileSnapshotEntry
                 {
                     layer = layerType,
                     itemId = blockData.GetItemID(),

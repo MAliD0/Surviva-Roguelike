@@ -23,27 +23,6 @@ public class MapSnapshotSync : NetworkBehaviour
     [Tooltip("Присылать биндинг сетевых GO (если нет биндера на префабах)")]
     [SerializeField] private bool sendNetworkedBindSnapshot = true;
 
-    // -------- DTO --------
-    [Serializable]
-    public struct TileSnapshotEntry : INetworkSerializable
-    {
-        public MapLayerType layer;
-        public string itemId; // MapBlockData.GetItemID()
-        public V2I anchor;    // integer tileIndex anchor (existing)
-        public V2I localAnchor; // optional: subtile anchor inside that tileIndex
-        public Vector3 pos;     // optional: precise world position for the anchor subtile
-        public int hp;
-
-        public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
-        {
-            s.SerializeValue(ref layer);
-            s.SerializeValue(ref itemId);
-            s.SerializeValue(ref anchor);
-            s.SerializeValue(ref localAnchor);
-            s.SerializeValue(ref hp);
-        }
-    }
-
     // ----- lifecycle -----
     public override void OnNetworkSpawn()
     {
