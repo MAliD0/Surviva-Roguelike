@@ -13,6 +13,7 @@ public class MapSnapshotSync : NetworkBehaviour
     [Header("Refs (автопоиск при спавне)")]
     [SerializeField] private WorldMapManager world;
     [SerializeField] private MapBlockDataLibrary blockLibrary;
+    private MapSnapshotBuilder snapshotBuilder;
 
     [Header("Chunk sizes")]
     [SerializeField] private int tileChunkSize = 80;
@@ -46,8 +47,14 @@ public class MapSnapshotSync : NetworkBehaviour
     // ----- lifecycle -----
     public override void OnNetworkSpawn()
     {
-        if (!world) world = WorldMapManager.Instance;
-        if (!blockLibrary) blockLibrary = world ? world.blockLibrary : null;
+        if (!world)
+            world = WorldMapManager.Instance;
+
+        if (!blockLibrary)
+            blockLibrary = world ? world.BlockLibrary : null;
+
+        if (world != null)
+            snapshotBuilder = new MapSnapshotBuilder(world);
 
         if (IsServer)
             NetworkManager.OnClientConnectedCallback += OnClientConnectedServer;
@@ -73,13 +80,18 @@ public class MapSnapshotSync : NetworkBehaviour
             yield break;
         }
 
+        if (snapshotBuilder == null)
+            snapshotBuilder = new MapSnapshotBuilder(world);
+        
         var target = new ClientRpcParams
         {
             Send = new ClientRpcSendParams { TargetClientIds = new[] { clientId } }
         };
 
         // 1) Тайлы чанками
-        var tiles = BuildTileSnapshot();
+        var tiles = snapshotBuilder.BuildTileSnapshot();
+        Debug.Log($"[MapSnapshotSync] Tile snapshot count: {tiles.Count}");
+
         for (int i = 0; i < tiles.Count; i += tileChunkSize)
         {
             var slice = tiles.GetRange(i, Mathf.Min(tileChunkSize, tiles.Count - i)).ToArray();
@@ -95,7 +107,6 @@ public class MapSnapshotSync : NetworkBehaviour
             world.GetNetlessRegistry()
         );
 
-        Debug.Log($"[MapSnapshotSync] Netless snapshot count: {netlessEntries.Count}");
 
         for (int i = 0; i < netlessEntries.Count; i += netlessChunkSize)
         {
@@ -142,50 +153,10 @@ public class MapSnapshotSync : NetworkBehaviour
                 // Later, when we finish binding snapshot, use entry.TileAnchor / entry.SubtileAnchor
                 // to reconstruct occupied cells.
 
-                if (++sent % 200 == 0)
+                if (++sent % 50 == 0)
                     yield return new WaitForSeconds(0.03f);
             }
         }
-    }
-
-    // ----- snapshot builders (server) -----
-    private List<TileSnapshotEntry> BuildTileSnapshot()
-    {
-        var result = new List<TileSnapshotEntry>();
-
-        void AddLayer(MapLayerType t, MapLayerLogic logic)
-        {
-            if (logic == null) return;
-            var seen = new HashSet<Vector2Int>();
-            foreach (Vector2Int tileIndex in logic.LayerTiles.Keys)
-            {
-                foreach (var subtile in logic.LayerTiles[tileIndex].Values)
-                {
-                    var blockData = subtile.BlockData;
-                    var anchor = subtile.ParentTile;
-                    var localAnchor = subtile.Position;
-
-                    if (!seen.Add(anchor)) continue; // один раз на мульти-группу
-
-                    int hp = blockData.breakable ? logic.GetHealth(anchor, localAnchor) : 0;
-                    result.Add(new TileSnapshotEntry { layer = t, itemId = blockData.GetItemID(), anchor = anchor, localAnchor = localAnchor,hp = hp });
-
-                }
-            }
-        }
-
-        AddLayer(MapLayerType.backGround, world.GetLayer(MapLayerType.backGround));
-        AddLayer(MapLayerType.foreGround, world.GetLayer(MapLayerType.foreGround));
-        AddLayer(MapLayerType.boatGround, world.GetLayer(MapLayerType.boatGround));
-        AddLayer(MapLayerType.onBoatGround, world.GetLayer(MapLayerType.onBoatGround));
-        return result;
-    }
-
-    private static V2I[] ToV2IArray(Vector2Int[] arr)
-    {
-        var res = new V2I[arr.Length];
-        for (int i = 0; i < arr.Length; i++) res[i] = arr[i];
-        return res;
     }
 
     // ----- client RPCs -----
@@ -215,36 +186,4 @@ public class MapSnapshotSync : NetworkBehaviour
         }
     }
 
-
-    [ClientRpc]
-    private void BindObjectByNetIdClientRpc(V2I[] cellsV2I, ulong netId, MapLayerType layer, ClientRpcParams p = default)
-    {
-        var sm = NetworkManager.Singleton.SpawnManager;
-        if (!sm.SpawnedObjects.TryGetValue(netId, out var no))
-        {
-            StartCoroutine(RetryBind(cellsV2I, netId, layer));
-            return;
-        }
-
-        var cells = new List<Vector2Int>(cellsV2I.Length);
-        foreach (var c in cellsV2I) cells.Add(c);
-        //world.GetGraphics(layer).BindObject(cells, no.gameObject, null);
-    }
-
-    private IEnumerator RetryBind(V2I[] cellsV2I, ulong netId, MapLayerType layer)
-    {
-        var sm = NetworkManager.Singleton.SpawnManager;
-        for (int i = 0; i < 60; i++) // до ~1 сек при 60 FPS
-        {
-            yield return null;
-            if (sm.SpawnedObjects.TryGetValue(netId, out var no))
-            {
-                var cells = new List<Vector2Int>(cellsV2I.Length);
-                foreach (var c in cellsV2I) cells.Add(c);
-                //world.GetGraphics(layer).BindObject(cells, no.gameObject, null);
-                yield break;
-            }
-        }
-        Debug.LogWarning($"[MapSnapshotSync] RetryBind timeout for netId={netId}");
-    }
 }
