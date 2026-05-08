@@ -123,7 +123,7 @@ public class LootObject : NetworkBehaviour, IInteractable
             return;
         }
 
-        ItemData itemData = ItemDatabase.instance.GetItem(itemId);
+        ItemData itemData = ItemDatabase.instance.GetById(itemId);
 
         sr.sprite = itemData != null ? itemData.itemIcon : null;
     }

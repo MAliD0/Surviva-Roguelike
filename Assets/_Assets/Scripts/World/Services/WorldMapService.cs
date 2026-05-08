@@ -41,7 +41,7 @@ public class WorldMapService
         if (blockLibrary == null)
             return WorldMapOperationResult.Fail("Block library is missing.");
 
-        MapBlockData blockData = blockLibrary.GetMapBlockData(blockId);
+        MapBlockData blockData = blockLibrary.GetById(blockId);
 
         if (blockData == null)
             return WorldMapOperationResult.Fail($"BlockData not found for id: {blockId}");

@@ -33,7 +33,7 @@ public class MapPlacementValidator
             );
         }
 
-        MapBlockData blockData = blockLibrary.GetMapBlockData(blockId);
+        MapBlockData blockData = blockLibrary.GetById(blockId);
 
         return Validate(worldPosition, blockData);
     }

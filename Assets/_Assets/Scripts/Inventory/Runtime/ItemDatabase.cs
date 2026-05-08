@@ -13,10 +13,10 @@ public class ItemDatabase : MonoBehaviour
     {
         instance = this;
     }
-    public ItemData GetItem(string itemId)
+    public ItemData GetById(string itemId)
     {
-        ItemData item = blockLibrary.GetMapBlockData(itemId);
-        ItemData itemData = itemLibrary.GetMapBlockData(itemId);
+        ItemData item = blockLibrary.GetById(itemId);
+        ItemData itemData = itemLibrary.GetById(itemId);
 
         return item==null? itemData: item;
     }

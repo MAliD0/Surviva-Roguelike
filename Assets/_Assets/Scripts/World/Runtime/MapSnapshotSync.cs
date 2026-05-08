@@ -146,7 +146,7 @@ public class MapSnapshotSync : NetworkBehaviour
         foreach (var e in chunk)
         {
             var layer = world.GetLayer(e.layer);
-            var data = blockLibrary.GetMapBlockData(e.itemId);
+            var data = blockLibrary.GetById(e.itemId);
             if (layer == null || data == null) continue;
 
             // идемпотентность

@@ -61,7 +61,7 @@ public class WorldMapNetworkSync : NetworkBehaviour
             return;
 
         MapLayerLogic layer = world.GetLayer(tileType);
-        MapBlockData data = world.BlockLibrary.GetMapBlockData(mapBlockDataID);
+        MapBlockData data = world.BlockLibrary.GetById(mapBlockDataID);
 
         if (layer == null || data == null)
             return;
@@ -214,7 +214,7 @@ public class WorldMapNetworkSync : NetworkBehaviour
         if (world == null)
             return;
 
-        GameObject prefab = world.BlockLibrary.GetMapBlockData(itemId)?.gameObject;
+        GameObject prefab = world.BlockLibrary.GetById(itemId)?.gameObject;
 
         if (prefab == null)
         {

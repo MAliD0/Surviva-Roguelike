@@ -50,7 +50,7 @@ public class Inventory : MonoBehaviour
 
     public int AddItem(string data, int number)
     {
-        return AddItem(ItemDatabase.instance.GetItem(data), number);
+        return AddItem(ItemDatabase.instance.GetById(data), number);
     }
     public int AddItem(ItemData data, int number)
     {

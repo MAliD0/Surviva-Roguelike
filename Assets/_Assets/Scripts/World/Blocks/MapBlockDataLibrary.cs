@@ -36,7 +36,7 @@ public class MapBlockDataLibrary : ScriptableObject
         }
     }
 
-    public MapBlockData GetMapBlockData(string id)
+    public MapBlockData GetById(string id)
     {
         dataLibrary.TryGetValue(id, out MapBlockData mapBlockData);
         return mapBlockData;

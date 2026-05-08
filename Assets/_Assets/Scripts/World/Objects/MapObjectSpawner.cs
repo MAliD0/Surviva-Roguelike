@@ -47,7 +47,7 @@ public class MapObjectSpawner
         Vector2 worldPosition = layer.SubtileToWorldPosition(tileAnchor, subtileAnchor);
 
         GameObject prefab = blockLibrary
-            .GetMapBlockData(blockData.GetItemID())
+            .GetById(blockData.GetItemID())
             ?.gameObject;
 
         if (prefab == null)
@@ -141,7 +141,7 @@ public class MapObjectSpawner
         Vector2 worldPosition = layer.SubtileToWorldPosition(tileAnchor, subtileAnchor);
 
         GameObject prefab = blockLibrary
-            .GetMapBlockData(blockData.GetItemID())
+            .GetById(blockData.GetItemID())
             ?.gameObject;
 
         if (prefab == null)

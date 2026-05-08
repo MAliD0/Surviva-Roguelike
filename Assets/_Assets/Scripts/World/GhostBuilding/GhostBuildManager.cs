@@ -174,7 +174,7 @@ public class GhostBuildManager : MonoBehaviour
         Vector2 worldPosition = ghostLayerLogic.SubtileToWorldPosition(anchorTile, anchorSubtile);
 
         GameObject prefab = WorldMapManager.Instance.blockLibrary
-            .GetMapBlockData(data.GetItemID())
+            .GetById(data.GetItemID())
             ?.gameObject;
 
         if (prefab == null)

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using AYellowpaper.SerializedCollections;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -5,12 +7,13 @@ using UnityEngine;
     
 public class ItemLibrary : ScriptableObject
 {
-    [ReadOnly][SerializeField] SerializedDictionary<string, ItemData> dataLibrary;
+    [SerializeField] string ItemsFolder = "Items";
+    [ReadOnly][SerializeField] protected SerializedDictionary<string, ItemData> dataLibrary;
 
     [Button("Generate Library")]
     public void GenerateLibrary()
     {
-        ItemData[] assets = Resources.LoadAll<ItemData>("Items");
+        ItemData[] assets = Resources.LoadAll<ItemData>(ItemsFolder);
         foreach (ItemData asset in assets)
         {
             if (!dataLibrary.ContainsKey(asset.GetItemID()))
@@ -50,9 +53,14 @@ public class ItemLibrary : ScriptableObject
         }
     }
 
-    public ItemData GetMapBlockData(string id)
+    public ItemData GetById(string id)
     {
         dataLibrary.TryGetValue(id, out ItemData itemData);
         return itemData;
+    }
+
+    public List<ItemData> getAllItems()
+    {
+        return dataLibrary.Values.ToList();
     }
 }
