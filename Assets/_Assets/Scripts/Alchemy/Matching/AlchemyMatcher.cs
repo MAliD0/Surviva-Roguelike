@@ -33,7 +33,7 @@ public class AlchemyMatcher
         //InputProfile has enough number of aspects
         for(int i = possibleAlchemyItems.Count - 1; i >= 0; i--)
         {
-            if(inputProfile.HasEnoughAspectsAmount(possibleAlchemyItems[i].aspectProfile))
+            if(!inputProfile.HasEnoughAspectsAmount(possibleAlchemyItems[i].aspectProfile))
                 possibleAlchemyItems.RemoveAt(i);
         }
 

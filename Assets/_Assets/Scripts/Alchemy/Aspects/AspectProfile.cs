@@ -22,7 +22,7 @@ public class AspectProfile
 
     public bool HasAspect(AspectDefinition aspect)
     {
-        return aspects.Find(x => x.aspect == aspect) == null;
+        return aspects.Find(x => x.aspect == aspect) != null;
     }
 
     public int GetAmount(AspectDefinition aspect)
@@ -194,7 +194,7 @@ public class AspectProfile
             if(aspectToFind != null)
                 continue;
             
-            notContainingAspects.Add(aspectToFind);
+            notContainingAspects.Add(aspect);
         }
 
         return notContainingAspects.ToArray();
@@ -221,7 +221,7 @@ public class AspectProfile
         {
             AspectStack aspectToFind = aspects.Find(x => x.aspect == aspect.aspect);
 
-            if (aspectToFind == null || aspectToFind.amount > aspect.amount)
+            if (aspectToFind == null || aspectToFind.amount < aspect.amount)
                 return false;
         }
 
