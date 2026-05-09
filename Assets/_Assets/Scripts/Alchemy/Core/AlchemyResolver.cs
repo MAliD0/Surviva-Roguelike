@@ -25,7 +25,7 @@ public class AlchemyResolver : MonoBehaviour
     {
         AspectProfile outputProfile = inputProfile.Clone();
 
-        ApplyModifiers(outputProfile, circle.aspectModifier);
+        ApplyModifiers(outputProfile, circle.aspectModifiers);
         ApplyConversions(outputProfile, circle.conversionRules);
 
         return outputProfile;

@@ -55,7 +55,7 @@ public class AlchemyEngine : MonoBehaviour
 
     private AlchemyResult ExecuteTransmute(AlchemyRequest request)
     {
-        
+        return null;
     }
 
     private bool ValidateRequest(
@@ -63,6 +63,7 @@ public class AlchemyEngine : MonoBehaviour
         out string failureReason
     )
     {
-        
+        failureReason = "didn't write method";
+        return false;
     }
 }

@@ -19,7 +19,7 @@ public class AlchemyMatcher
         //Circle has same or more complexity
         for(int i = possibleAlchemyItems.Count - 1; i >= 0; i--)
         {
-            if(circle.maxComplexity < possibleAlchemyItems[i].complexity)
+            if(circle.complexityLimit < possibleAlchemyItems[i].complexity)
                 possibleAlchemyItems.RemoveAt(i);
         }
 
@@ -65,7 +65,7 @@ public class AlchemyMatcher
         List<AlchemyMatchResult> alchemyMatchResults = FindMatches(inputProfile, candidates,circle,knowledge);
         
         AlchemyMatchResult bestMatch = alchemyMatchResults[0];
-        for (int i = 1; i < alchemyMatchResults.Count - 1; i++)
+        for (int i = 1; i < alchemyMatchResults.Count; i++)
         {
             Debug.Log($"{bestMatch.item.name}: {bestMatch.matchQuality} | {alchemyMatchResults[i].item.name}: {alchemyMatchResults[i].matchQuality}");
             if(alchemyMatchResults[i].matchQuality > bestMatch.matchQuality)
@@ -79,6 +79,8 @@ public class AlchemyMatcher
         List<AlchemyMatchResult> candidates
     )
     {
+        if(candidates == null) return null;
+
         AlchemyMatchResult bestMatch = candidates[0];
         for (int i = 1; i < candidates.Count - 1; i++)
         {
@@ -108,7 +110,7 @@ public class AlchemyMatcher
             CalculateMatchQuality(inputProfile, candidate.aspectProfile),
             true,
             true,
-            circle.maxComplexity >= candidate.complexity,
+            circle.complexityLimit >= candidate.complexity,
             candidate.aspectProfile,
             new AspectProfile(inputProfile.GetAspectsNotContainedIn(candidate.aspectProfile))
         );
@@ -132,8 +134,8 @@ public class AlchemyMatcher
         }
         
 
-        float percentOfDifferentAspects = amountOfDifferentAspects / inputProfile.GetAspectAmount();
-        float percentOfDifferentAspectsAmount = differentAspectsTotalAmount / inputProfile.GetTotalAmount(); 
+        float percentOfDifferentAspects = (float)amountOfDifferentAspects / inputProfile.GetAspectAmount();
+        float percentOfDifferentAspectsAmount = (float)differentAspectsTotalAmount / inputProfile.GetTotalAmount(); 
 
         return 1f - (percentOfDifferentAspects * percentOfDifferentAspectsAmount);        
     }
