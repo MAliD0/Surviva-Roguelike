@@ -10,18 +10,22 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cf51fc1490f51484e94f2820e9713fed, type: 3}
-  m_Name: ItemLibrary
+  m_Name: AlchemyItemLibrary
   m_EditorClassIdentifier: 
   ItemsFolder: Alchemy/Items
   dataLibrary:
     _serializedList:
-    - Key: Wood
-      Value: {fileID: 11400000, guid: 51956b3bf1d493e448ba5933ea0f21df, type: 2}
     - Key: Acorn
       Value: {fileID: 11400000, guid: 2141cbf7b0f5abb448528cd55857b904, type: 2}
+    - Key: Coal
+      Value: {fileID: 11400000, guid: 58627b1256382124b842a73c0d6fb4e3, type: 2}
     - Key: HillTile
       Value: {fileID: 11400000, guid: dd157aea13dae5f41926a65014917b6e, type: 2}
     - Key: Dirt pile
       Value: {fileID: 11400000, guid: 1df5f84649edfa54b8cc3cf4634cd027, type: 2}
+    - Key: Residue
+      Value: {fileID: 11400000, guid: 569a7c5190ddb2448a89f1c8240a6a6b, type: 2}
     - Key: Stone
       Value: {fileID: 11400000, guid: 884b7cdba5c4bbd418e3c718b4d19d92, type: 2}
+    - Key: Wood
+      Value: {fileID: 11400000, guid: 51956b3bf1d493e448ba5933ea0f21df, type: 2}

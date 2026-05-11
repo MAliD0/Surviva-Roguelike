@@ -1,8 +1,5 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class AlchemyEngine : MonoBehaviour
 {
@@ -16,6 +13,11 @@ public class AlchemyEngine : MonoBehaviour
     {
         AlchemyResult alchemyResult = new AlchemyResult();
 
+        if(request.inputItems == null){
+            alchemyResult.Failed($"Input files are not set");
+            return alchemyResult;
+        }
+
         AspectProfile inputProfile = resolver.BuildInputProfile(request.inputItems);
 
         AspectProfile changedProfile = resolver.ApplyCircle(inputProfile , request.circle.definition);
@@ -28,8 +30,9 @@ public class AlchemyEngine : MonoBehaviour
             request.knowledge);
 
         AlchemyMatchResult alchemyMatchResult = matcher.SelectBestMatch(candidates);
+    
 
-        if(alchemyMatchResult.item == null)
+        if(alchemyMatchResult == null || alchemyMatchResult.item == null)
         {
             alchemyResult.Failed($"Didn't find suitable match for {changedProfile.ToString()}");
             return alchemyResult;

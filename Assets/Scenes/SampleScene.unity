@@ -609,6 +609,8 @@ GameObject:
   m_Component:
   - component: {fileID: 97497721}
   - component: {fileID: 97497722}
+  - component: {fileID: 97497724}
+  - component: {fileID: 97497723}
   m_Layer: 0
   m_Name: AlchemyHolder
   m_TagString: Untagged
@@ -643,7 +645,78 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b29e8790bd1752f439cedb7b93711d20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemDatabase: {fileID: 0}
+  itemDatabase: {fileID: 97497724}
+--- !u!114 &97497723
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 97497720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14cf1fc6143ec184cbae7d9499b1a619, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  alchemyEngine: {fileID: 97497722}
+  alchemyRequest:
+    inputItems:
+    - itemData: {fileID: 11400000, guid: 51956b3bf1d493e448ba5933ea0f21df, type: 2}
+      number: 2
+    circle: {fileID: 1385387393}
+    processType: 1
+    availableEnergy: 10
+    knowledge: {fileID: 0}
+    intendedTarget: {fileID: 0}
+  alchemyResult:
+    success: 1
+    failureReason: 
+    outputItem: {fileID: 11400000, guid: 569a7c5190ddb2448a89f1c8240a6a6b, type: 2}
+    qualityTier: 1
+    originalInputProfile:
+      aspects:
+      - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
+        amount: 10
+      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
+        amount: 10
+      - aspect: {fileID: 11400000, guid: 63e9be04eb8ea9f46a185cdf45c11890, type: 2}
+        amount: 2
+    transformedProfile:
+      aspects:
+      - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
+        amount: 10
+      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
+        amount: 5
+      - aspect: {fileID: 11400000, guid: 07d89bf43d5f0f740968da363f2882ee, type: 2}
+        amount: 1
+      - aspect: {fileID: 11400000, guid: d81d8a7fe9c92ff47b545e805c68031e, type: 2}
+        amount: 1
+    residueProfile:
+      aspects:
+      - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
+        amount: 10
+      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
+        amount: 5
+      - aspect: {fileID: 11400000, guid: 07d89bf43d5f0f740968da363f2882ee, type: 2}
+        amount: 1
+      - aspect: {fileID: 11400000, guid: d81d8a7fe9c92ff47b545e805c68031e, type: 2}
+        amount: 1
+    residueRatio: 0.77272725
+    matchQuality: 1
+--- !u!114 &97497724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 97497720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2da7b186e5db0b4aaf8b05680e8fda0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  allAlchemyItems: {fileID: 11400000, guid: 46b8efcea69d11e40bc47797986bcc30, type: 2}
+  residueItem: {fileID: 11400000, guid: 569a7c5190ddb2448a89f1c8240a6a6b, type: 2}
 --- !u!1 &142711441
 GameObject:
   m_ObjectHideFlags: 0

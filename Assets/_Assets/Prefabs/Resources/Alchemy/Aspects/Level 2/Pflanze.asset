@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Pflanze
   m_EditorClassIdentifier: 
   id: 
-  displayName: Erde
+  displayName: Pflanze
   icon: {fileID: 0}
   color: {r: 0.465059, g: 0.62352943, b: 0.22745097, a: 1}
   complexity: 2
