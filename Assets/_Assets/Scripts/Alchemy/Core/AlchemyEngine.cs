@@ -35,6 +35,7 @@ public class AlchemyEngine : MonoBehaviour
         if(alchemyMatchResult == null || alchemyMatchResult.item == null)
         {
             alchemyResult.Failed($"Didn't find suitable match for {changedProfile.ToString()}");
+            alchemyResult.residueProfile = changedProfile;
             return alchemyResult;
         }
         

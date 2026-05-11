@@ -22,6 +22,12 @@ public class AlchemyMatcher
             if(circle.complexityLimit < possibleAlchemyItems[i].complexity)
                 possibleAlchemyItems.RemoveAt(i);
         }
+        
+        for(int i = possibleAlchemyItems.Count - 1; i >= 0; i--)
+        {
+            if(possibleAlchemyItems[i].excludeFromNormalMatching)
+                possibleAlchemyItems.RemoveAt(i);
+        }
 
         //Input contains all aspects of candidate 
        for(int i = possibleAlchemyItems.Count - 1; i >= 0; i--)

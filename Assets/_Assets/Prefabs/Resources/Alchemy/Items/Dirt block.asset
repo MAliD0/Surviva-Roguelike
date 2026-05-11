@@ -23,7 +23,7 @@ MonoBehaviour:
     - aspect: {fileID: 11400000, guid: 876f7b3945ff1194b89e7411577f29a5, type: 2}
       amount: 12
     - aspect: {fileID: 11400000, guid: cb02d51691030d24cbae5a6b28332f4b, type: 2}
-      amount: 10
+      amount: 8
   complexity: 1
   excludeFromNormalMatching: 0
   alchemyDescription: 

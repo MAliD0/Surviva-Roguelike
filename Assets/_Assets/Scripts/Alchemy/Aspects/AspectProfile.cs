@@ -20,6 +20,11 @@ public class AspectProfile
         this.aspects = aspects.ToList();
     }
 
+    public void Clear()
+    {
+        aspects = new List<AspectStack>();
+    }
+
     public bool HasAspect(AspectDefinition aspect)
     {
         return aspects.Find(x => x.aspect == aspect) != null;

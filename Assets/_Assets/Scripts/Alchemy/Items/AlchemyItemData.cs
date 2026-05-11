@@ -16,6 +16,13 @@ public class AlchemyItemData : ItemData
     {
         return aspectProfile;
     }
+    public void Clear()
+    {
+        aspectProfile = new AspectProfile();
+        complexity = 1;
+        alchemyDescription = "";
+        category = AlchemyItemCategory.Basic;
+    }
     public bool IsAlchemyItem()
     {
         return true;

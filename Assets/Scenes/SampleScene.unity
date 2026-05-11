@@ -662,47 +662,35 @@ MonoBehaviour:
   alchemyRequest:
     inputItems:
     - itemData: {fileID: 11400000, guid: 51956b3bf1d493e448ba5933ea0f21df, type: 2}
-      number: 2
+      number: 1
     circle: {fileID: 1385387393}
     processType: 1
     availableEnergy: 10
     knowledge: {fileID: 0}
     intendedTarget: {fileID: 0}
   alchemyResult:
-    success: 1
-    failureReason: 
-    outputItem: {fileID: 11400000, guid: 569a7c5190ddb2448a89f1c8240a6a6b, type: 2}
-    qualityTier: 1
+    success: 0
+    failureReason: 'Didn''t find suitable match for Materie (AspectDefinition) 5
+      | Wasser (AspectDefinition) 2 | Verfall (AspectDefinition) 1 | Hitze (AspectDefinition)
+      1 | '
+    outputItem: {fileID: 0}
+    qualityTier: 0
     originalInputProfile:
-      aspects:
-      - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
-        amount: 10
-      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
-        amount: 10
-      - aspect: {fileID: 11400000, guid: 63e9be04eb8ea9f46a185cdf45c11890, type: 2}
-        amount: 2
+      aspects: []
     transformedProfile:
-      aspects:
-      - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
-        amount: 10
-      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
-        amount: 5
-      - aspect: {fileID: 11400000, guid: 07d89bf43d5f0f740968da363f2882ee, type: 2}
-        amount: 1
-      - aspect: {fileID: 11400000, guid: d81d8a7fe9c92ff47b545e805c68031e, type: 2}
-        amount: 1
+      aspects: []
     residueProfile:
       aspects:
       - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
-        amount: 10
-      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
         amount: 5
+      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
+        amount: 2
       - aspect: {fileID: 11400000, guid: 07d89bf43d5f0f740968da363f2882ee, type: 2}
         amount: 1
       - aspect: {fileID: 11400000, guid: d81d8a7fe9c92ff47b545e805c68031e, type: 2}
         amount: 1
-    residueRatio: 0.77272725
-    matchQuality: 1
+    residueRatio: 0
+    matchQuality: 0
 --- !u!114 &97497724
 MonoBehaviour:
   m_ObjectHideFlags: 0

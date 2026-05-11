@@ -3,6 +3,11 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AlchemyItemData", menuName = "Alchemy/Residue")]
 public class ResidueItemData : AlchemyItemData
 {
-    public new bool excludeFromNormalMatching = true;
-    public new AlchemyItemCategory category = AlchemyItemCategory.Residue;
+    private void OnValidate()
+    {
+        excludeFromNormalMatching = true;
+        category = AlchemyItemCategory.Residue;
+        isStackable = false; // for now, until stack data supports residue identity
+    }
+
 }
