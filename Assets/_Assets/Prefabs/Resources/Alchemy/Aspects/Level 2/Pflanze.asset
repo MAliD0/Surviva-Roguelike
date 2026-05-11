@@ -10,10 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 93f816a592c52424585813c438942805, type: 3}
-  m_Name: Materia
+  m_Name: Pflanze
   m_EditorClassIdentifier: 
   id: 
-  displayName: Materia
+  displayName: Erde
   icon: {fileID: 0}
-  color: {r: 0.6037736, g: 0.6037736, b: 0.6037736, a: 1}
+  color: {r: 0.465059, g: 0.62352943, b: 0.22745097, a: 1}
+  complexity: 2
   description: 

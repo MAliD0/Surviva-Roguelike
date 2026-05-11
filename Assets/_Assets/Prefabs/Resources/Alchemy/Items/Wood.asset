@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86bf7854e742e1347b1de06016286e13, type: 3}
+  m_Name: Wood
+  m_EditorClassIdentifier: 
+  itemIcon: {fileID: 976252184, guid: e98ce7ad3be13e94bb50828be9256ca1, type: 3}
+  itemType: 2
+  isStackable: 1
+  maxStack: 24
+  aspectProfile:
+    aspects:
+    - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
+      amount: 5
+    - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
+      amount: 5
+    - aspect: {fileID: 11400000, guid: 63e9be04eb8ea9f46a185cdf45c11890, type: 2}
+      amount: 2
+  complexity: 1
+  excludeFromNormalMatching: 0
+  alchemyDescription: 
+  category: 0

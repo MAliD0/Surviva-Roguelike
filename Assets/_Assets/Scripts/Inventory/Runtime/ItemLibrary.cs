@@ -28,6 +28,14 @@ public class ItemLibrary : ScriptableObject
         OnUpdate();
     }
 
+    [Button("Reset Library")]
+    public void ResetLibrary()
+    {
+        dataLibrary = new SerializedDictionary<string, ItemData>();
+        OnUpdate();
+    }
+
+
     public void AddData(ItemData itemData)
     {
         if (!dataLibrary.ContainsKey(itemData.GetItemID()))

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class AlchemyResolver : MonoBehaviour
+public class AlchemyResolver
 {
     public AspectProfile BuildInputProfile(List<ItemSlot> inputItems)
     {

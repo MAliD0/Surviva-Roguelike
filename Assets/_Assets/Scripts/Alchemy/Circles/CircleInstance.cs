@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CircleInstance
+public class CircleInstance: MonoBehaviour
 {
     public CircleDefinition definition;
     public int level = 1;
@@ -11,7 +11,7 @@ public class CircleInstance
 
     public bool HasEnoughEnergy(float amount)
     {
-        return currentEnergy == amount;
+        return currentEnergy >= amount;
     }
     public void AddEnergy(float amount)
     {

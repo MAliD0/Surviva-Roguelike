@@ -79,10 +79,10 @@ public class AlchemyMatcher
         List<AlchemyMatchResult> candidates
     )
     {
-        if(candidates == null) return null;
+        if(candidates == null || candidates.Count == 0) return null;
 
         AlchemyMatchResult bestMatch = candidates[0];
-        for (int i = 1; i < candidates.Count - 1; i++)
+        for (int i = 1; i < candidates.Count; i++)
         {
             Debug.Log($"{bestMatch.item.name}: {bestMatch.matchQuality} | {candidates[i].item.name}: {candidates[i].matchQuality}");
             if(candidates[i].matchQuality > bestMatch.matchQuality)

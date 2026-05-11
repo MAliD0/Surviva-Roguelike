@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-[CreateAssetMenu(fileName ="MapBlock",menuName ="Map/MapBlock")]
-public class MapBlockData : ItemData
+[CreateAssetMenu(fileName = "AlchemyItemData", menuName = "Alchemy/AlchemyMapBlock")]
+public class AlchemyMapBlockData : AlchemyItemData
 {
     public MapBlockType mapBlockType;
     new ItemType itemType = ItemType.Placeable;
@@ -30,8 +30,8 @@ public class MapBlockData : ItemData
     [ShowIf("mapBlockType", MapBlockType.Tile)]
     public List<Vector2Int> tileOffsets;
 
-    [FoldoutGroup("Settings")] public bool hasLoot;
-    [FoldoutGroup("Loot")][ShowIf("hasLoot")] [SerializeField] bool dropSelf;
+    [FoldoutGroup("Settings")] public bool hasLoot = true;
+    [FoldoutGroup("Loot")][ShowIf("hasLoot")] [SerializeField] bool dropSelf = true;
     [FoldoutGroup("Loot")][HideIf("dropSelf")][ShowIf("hasLoot")] public List<LootRules> loot= new List<LootRules>();
     
     
@@ -72,4 +72,3 @@ public class MapBlockData : ItemData
         }
     }
 }
-

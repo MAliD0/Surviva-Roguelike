@@ -6,8 +6,6 @@ public class AspectStack
 {
     public AspectDefinition aspect;
     public int amount;
-    public float purity;
-
     public AspectStack(AspectDefinition aspectDefinition, int amount)
     {
         this.aspect = aspectDefinition;

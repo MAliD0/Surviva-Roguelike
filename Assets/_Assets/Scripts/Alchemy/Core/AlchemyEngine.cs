@@ -6,11 +6,11 @@ using UnityEngine.UIElements;
 
 public class AlchemyEngine : MonoBehaviour
 {
-    private AlchemyResolver resolver;
-    private AlchemyMatcher matcher;
+    [SerializeField] private AlchemyResolver resolver = new AlchemyResolver();
+    [SerializeField] private AlchemyMatcher matcher = new AlchemyMatcher();
     //private ResidueCalculator residueCalculator; //is static
-    private QualityCalculator qualityCalculator;
-    private AlchemyItemDatabase itemDatabase;
+    [SerializeField] private QualityCalculator qualityCalculator = new QualityCalculator();
+    [SerializeField] private AlchemyItemDatabase itemDatabase;
 
     public AlchemyResult Execute(AlchemyRequest request)
     {

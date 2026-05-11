@@ -9,6 +9,8 @@ public class AspectDefinition : ScriptableObject
     public Sprite icon;
     public Color color = Color.white;
 
+    public int complexity = 1;
+
     [TextArea]
     public string description;
 }
