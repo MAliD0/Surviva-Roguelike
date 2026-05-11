@@ -9,7 +9,7 @@ public static class ResidueCalculator
         AspectProfile usedProfile
     )
     {
-        return new AspectProfile(inputProfile.GetAspectsNotContainedIn(usedProfile)); 
+        return inputProfile.GetLeftoverAfterUsing(usedProfile); 
     }
 
     public static float CalculateResidueAmount(AspectProfile residueProfile)

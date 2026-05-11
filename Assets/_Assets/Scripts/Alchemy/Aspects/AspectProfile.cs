@@ -199,6 +199,17 @@ public class AspectProfile
 
         return notContainingAspects.ToArray();
     }
+    public AspectProfile GetLeftoverAfterUsing(AspectProfile usedProfile)
+    {
+        AspectProfile aspectProfile = this.Clone();
+
+        foreach (var aspect in usedProfile.aspects)
+        {
+            aspectProfile.TryRemoveAspect(aspect.aspect, aspect.amount);
+        }
+
+        return aspectProfile;
+    }
 
     public bool ContainsAllAspectsFrom(AlchemyItemData alchemyItem)
     {
