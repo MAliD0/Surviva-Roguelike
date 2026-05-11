@@ -22,7 +22,7 @@ public class AlchemyEngine : MonoBehaviour
 
         List<AlchemyMatchResult> candidates = 
         matcher.FindMatches(
-            inputProfile, 
+            changedProfile, 
             itemDatabase.getAllAlchemyItems(), 
             request.circle.definition, 
             request.knowledge);
@@ -32,6 +32,7 @@ public class AlchemyEngine : MonoBehaviour
         if(alchemyMatchResult.item == null)
         {
             alchemyResult.Failed($"Didn't find suitable match for {changedProfile.ToString()}");
+            return alchemyResult;
         }
         
         AspectProfile residueProfile = 
