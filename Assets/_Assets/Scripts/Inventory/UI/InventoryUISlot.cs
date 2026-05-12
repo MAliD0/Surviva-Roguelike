@@ -31,7 +31,7 @@ public class InventoryUISlot : MonoBehaviour, IPointerClickHandler, IBeginDragHa
         {
             this.itemData = itemSlot.itemData;
             itemSprite.sprite = itemData.itemIcon;
-            countField.text = itemSlot.number.ToString();
+            countField.text = itemSlot.amount.ToString();
         }
     }
 

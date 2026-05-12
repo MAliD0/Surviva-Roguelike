@@ -42,7 +42,7 @@ public class Inventory : MonoBehaviour
 
         foreach (var i in items)
         {
-            numberInInventory += i.number;
+            numberInInventory += i.amount;
         }
 
         return numberInInventory >= number;
@@ -160,8 +160,8 @@ public class Inventory : MonoBehaviour
         }
         else
         {
-            int excess = b.AddCount(a.number);
-            a.RemoveCount(a.number-excess);
+            int excess = b.AddCount(a.amount);
+            a.RemoveCount(a.amount-excess);
 
             onInventoryUpdate?.Invoke();
             return;

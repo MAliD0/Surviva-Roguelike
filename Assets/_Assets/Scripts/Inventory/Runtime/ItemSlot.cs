@@ -5,43 +5,48 @@ using UnityEngine;
 public class ItemSlot
 {
     public ItemData itemData; //{ get; private set; }
-    public int number;
+    public int amount;
 
     public ItemSlot()
     {
         itemData = null;
-        number = 0;
+        amount = 0;
     }
     public ItemSlot(ItemData data, int num = 0)
     {
         this.itemData = data;
-        this.number = num;
+        this.amount = num;
     }
     public ItemSlot(ItemSlot itemSlot)
     {
         this.itemData = itemSlot.itemData;
-        this.number = itemSlot.number;
+        this.amount = itemSlot.amount;
     }
-
 
     public bool IsFull()
     {
-        return number == itemData.maxStack;
+        return amount == itemData.maxStack;
     }
 
+    public bool CanAdd(int amount)
+    {
+        return itemData.maxStack - this.amount >= amount;
+    }
+
+    //return leftovers
     public int AddCount(int count)
     {
-        int availableSize = itemData.maxStack - number;
+        int availableSize = itemData.maxStack - amount;
         int addValue = Mathf.Min(availableSize, count);
-        number += addValue;
+        amount += addValue;
         return count-addValue;
     }
 
     public int RemoveCount(int count)
     {
-        int removeNumber = Mathf.Min(count, number);
-        number -= removeNumber;
-        if(number == 0)
+        int removeNumber = Mathf.Min(count, amount);
+        amount -= removeNumber;
+        if(amount == 0)
         {
             itemData = null;
         }
@@ -51,19 +56,19 @@ public class ItemSlot
     public void SetItemData(ItemData data, int number = 0)
     {
         this.itemData = data;
-        this.number = number;
+        this.amount = number;
     }
     public void SetItemData(ItemSlot item)
     {
         if(item == null)
         {
             itemData = null;
-            number = 0;
+            amount = 0;
         }
         else
         {
             this.itemData = item.itemData;
-            this.number = item.number;
+            this.amount = item.amount;
         }
     }
 }

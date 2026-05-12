@@ -15,12 +15,12 @@ public class AlchemyResolver
 
             AlchemyItemData alchemyItemData = (AlchemyItemData)item.itemData; 
 
-            if(item.number <= 0)
+            if(item.amount <= 0)
             {
                 Debug.LogWarning("Item amount == 0");
             }
             
-            for (int i = 0; i < item.number; i++)
+            for (int i = 0; i < item.amount; i++)
             {
                 aspectProfile.AddAspectProfile(alchemyItemData.aspectProfile);    
             }
