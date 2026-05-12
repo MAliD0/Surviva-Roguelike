@@ -32,7 +32,10 @@ public class ItemSlot
     {
         return itemData.maxStack - this.amount >= amount;
     }
-
+    public bool CanRemove(int amount)
+    {
+        return  this.amount >= amount;
+    }
     //return leftovers
     public int AddCount(int count)
     {

@@ -204,6 +204,16 @@ public class PlayerManager : NetworkBehaviour
         inventory.AddItem(itemId, number);
     }
 
+    public void RemoveItem(ItemData itemData, int number)
+    {
+        inventory.RemoveItem(itemData, number);
+    }
+
+    public ItemSlot GetCurrentHeldItem()
+    {
+        return itemHeld;
+    }
+
     private bool HasLocalControl
     {
         get

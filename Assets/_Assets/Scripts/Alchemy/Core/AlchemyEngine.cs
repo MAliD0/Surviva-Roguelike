@@ -9,6 +9,12 @@ public class AlchemyEngine : MonoBehaviour
     [SerializeField] private QualityCalculator qualityCalculator = new QualityCalculator();
     [SerializeField] private AlchemyItemDatabase itemDatabase;
 
+    public static AlchemyEngine Instance;
+    void Awake()
+    {
+        Instance = this;
+    }
+
     public AlchemyResult Execute(AlchemyRequest request)
     {
         AlchemyResult alchemyResult = new AlchemyResult();

@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class CirclePortInstance: MonoBehaviour, IItemHolder
+public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
 {
     public CirclePortType portType;
     public ItemSlot currentItem = new ItemSlot();
@@ -25,8 +25,12 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder
     {
         int amountLeft = amount;
 
-        if(CanAddItem(itemData))
+        if (CanAddItem(itemData))
+        {
+            currentItem.itemData = itemData;
             amountLeft = currentItem.AddCount(amount);
+        }
+            
         
         onItemUpdate?.Invoke(currentItem);
 
@@ -51,6 +55,17 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder
     public bool ContainsItem(ItemData itemData)
     {
         return currentItem.itemData == itemData;
+    }
+
+    public void OnInteract(GameObject interactor, ulong interacterId)
+    {
+        interactor.TryGetComponent<PlayerManager>(out PlayerManager playerManager);
+        ItemSlot itemSlot = playerManager.GetCurrentHeldItem();
+        if (itemSlot.CanRemove(1))
+        {
+            this.AddItem(itemSlot.itemData, 1);
+            playerManager.RemoveItem(itemSlot.itemData, 1);
+        }
     }
 
     public int RemoveItem(ItemData itemData, int amount)

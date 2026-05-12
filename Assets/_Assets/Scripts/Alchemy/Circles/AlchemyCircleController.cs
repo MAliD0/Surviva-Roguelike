@@ -1,9 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class AlchemyCircleController : MonoBehaviour
+public class AlchemyCircleController : MonoBehaviour, IInteractable
 {
     [SerializeField] private CircleInstance circleInstance;
     [SerializeField] private AlchemyEngine alchemyEngine;
@@ -32,6 +33,12 @@ public class AlchemyCircleController : MonoBehaviour
             .FirstOrDefault(p => p.portType == CirclePortType.ResidueOutput);
     }
 
+    void Start()
+    {
+        alchemyEngine = AlchemyEngine.Instance;
+    }
+    
+    [Button]
     public void ExecuteCircle()
     {
         List<ItemSlot> inputItems = new List<ItemSlot>();
@@ -48,5 +55,10 @@ public class AlchemyCircleController : MonoBehaviour
         alchemyRequest.circle = circleInstance;
 
         alchemyEngine.Execute(alchemyRequest);
+    }
+
+    public void OnInteract(GameObject interactor, ulong interacterId)
+    {
+        ExecuteCircle();
     }
 }
