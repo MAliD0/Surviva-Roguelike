@@ -37,7 +37,7 @@ public class AlchemyCircleController : MonoBehaviour, IInteractable
     {
         alchemyEngine = AlchemyEngine.Instance;
     }
-    
+
     [Button]
     public void ExecuteCircle()
     {
@@ -54,11 +54,23 @@ public class AlchemyCircleController : MonoBehaviour, IInteractable
         alchemyRequest.processType = AlchemyProcessType.Transmute;
         alchemyRequest.circle = circleInstance;
 
-        alchemyEngine.Execute(alchemyRequest);
+        lastResult = alchemyEngine.Execute(alchemyRequest);
+
+        ClearInputPorts();
+
+        outputPorts[0].AddItem(lastResult.outputItem, 1);
     }
 
     public void OnInteract(GameObject interactor, ulong interacterId)
     {
         ExecuteCircle();
+    }
+
+    private void ClearInputPorts()
+    {
+        foreach (var item in inputPorts)
+        {
+            item.Clear();
+        }
     }
 }

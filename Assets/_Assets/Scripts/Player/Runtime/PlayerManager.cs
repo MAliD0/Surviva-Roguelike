@@ -130,6 +130,13 @@ public class PlayerManager : NetworkBehaviour
         IInteractable[] interactables =
             playerInteractionManager.CastForInteractables(transform.position, castRadius);
 
+        Debug.Log($"Interactables found: {interactables.Length}");
+
+        for (int i = 0; i < interactables.Length; i++)
+        {
+            Debug.Log($"Interactable[{i}] = {interactables[i].GetType().Name}");
+        }
+
         if (interactables.Length <= 0)
             return;
 
@@ -203,7 +210,10 @@ public class PlayerManager : NetworkBehaviour
     {
         inventory.AddItem(itemId, number);
     }
-
+    public void AddItem(ItemData itemData, int number)
+    {
+        inventory.AddItem(itemData, number);
+    }
     public void RemoveItem(ItemData itemData, int number)
     {
         inventory.RemoveItem(itemData, number);

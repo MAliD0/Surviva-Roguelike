@@ -30,7 +30,6 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
             currentItem.itemData = itemData;
             amountLeft = currentItem.AddCount(amount);
         }
-            
         
         onItemUpdate?.Invoke(currentItem);
 
@@ -50,6 +49,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
     public void Clear()
     {
         currentItem = new ItemSlot();
+        onItemUpdate?.Invoke(currentItem);
     }
 
     public bool ContainsItem(ItemData itemData)
@@ -60,12 +60,28 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
     public void OnInteract(GameObject interactor, ulong interacterId)
     {
         interactor.TryGetComponent<PlayerManager>(out PlayerManager playerManager);
-        ItemSlot itemSlot = playerManager.GetCurrentHeldItem();
-        if (itemSlot.CanRemove(1))
+
+        switch (portType)
         {
-            this.AddItem(itemSlot.itemData, 1);
-            playerManager.RemoveItem(itemSlot.itemData, 1);
+            case CirclePortType.ItemInput:
+                ItemSlot itemSlot = playerManager.GetCurrentHeldItem();
+                if (itemSlot.CanRemove(1))
+                {
+                    this.AddItem(itemSlot.itemData, 1);
+                    playerManager.RemoveItem(itemSlot.itemData, 1);
+                }
+            break;
+
+            case CirclePortType.ItemOutput:
+                if(this.currentItem.itemData != null)
+                {
+                    playerManager.AddItem(currentItem.itemData, currentItem.amount); 
+                    Clear();
+                }
+            break;
         }
+
+
     }
 
     public int RemoveItem(ItemData itemData, int amount)
