@@ -10,11 +10,11 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder
     public Action<ItemSlot> onItemUpdate;
 
     public bool IsEmpty => currentItem.itemData == null;
-    public bool HasSpace => !currentItem.IsFull();
+    public bool HasSpace => IsEmpty || !currentItem.IsFull();
     public ItemData CurrentItemData => currentItem.itemData;
     public int CurrentAmount => currentItem.amount;
-    public int MaxAmount => currentItem.itemData.maxStack;
-
+    public int MaxAmount => currentItem.itemData != null ? currentItem.itemData.maxStack : 0;
+    
     public void AddEnergy(float amount)
     {
         storedEnergy += amount;
@@ -26,7 +26,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder
         int amountLeft = amount;
 
         if(CanAddItem(itemData))
-            amountLeft -= currentItem.AddCount(amount);
+            amountLeft = currentItem.AddCount(amount);
         
         onItemUpdate?.Invoke(currentItem);
 
