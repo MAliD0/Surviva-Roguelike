@@ -52,44 +52,58 @@ public class Inventory : MonoBehaviour
     {
         return AddItem(ItemDatabase.instance.GetById(data), number);
     }
-    public int AddItem(ItemData data, int number)
+    public int AddItem(ItemData itemData, int amount)
     {
-        int excess = number;
-        while (true)
-        {
-            ItemSlot itemSlot = slots.Find(x => x.itemData == data && !x.IsFull());
+        return AddItem(new ItemSlot(itemData, amount));
+    }
+    public int AddItem(ItemSlot incoming)
+    {
+        if (incoming == null || incoming.itemData == null || incoming.amount <= 0)
+            return incoming != null ? incoming.amount : 0;
 
-            if (itemSlot != null)
+        int amountLeft = incoming.amount;
+
+        // 1. Stack with compatible existing stacks.
+        foreach (ItemSlot slot in slots)
+        {
+            if (slot == null || slot.IsEmpty())
+                continue;
+
+            if (!slot.CanStackWith(incoming))
+                continue;
+
+            amountLeft = slot.AddCount(amountLeft);
+
+            if (amountLeft <= 0)
             {
-                excess = itemSlot.AddCount(excess);
-                print(excess);
-                if (excess > 0)
-                    continue;
-                else
-                {
-                    break;
-                }
-            }
-            else
-            {
-                itemSlot = slots.Find(x => x.itemData == null);
-                if (itemSlot != null)
-                {
-                    itemSlot.SetItemData(data);
-                    excess = itemSlot.AddCount(excess);
-                    print(excess);
-                    if (excess > 0)
-                        continue;
-                    else
-                        break;
-                }
-                else
-                    break;
+                onInventoryUpdate?.Invoke();
+                return 0;
             }
         }
-        print($"+{data.Name}: {number}|{excess}");
+
+        // 2. Add into empty slots.
+        foreach (ItemSlot slot in slots)
+        {
+            if (slot == null || !slot.IsEmpty())
+                continue;
+
+            slot.itemData = incoming.itemData;
+            slot.amount = 0;
+            slot.alchemyData = incoming.alchemyData != null
+                ? incoming.alchemyData.Clone()
+                : null;
+
+            amountLeft = slot.AddCount(amountLeft);
+
+            if (amountLeft <= 0)
+            {
+                onInventoryUpdate?.Invoke();
+                return 0;
+            }
+        }
+
         onInventoryUpdate?.Invoke();
-        return excess;
+        return amountLeft;
     }
 
     public int RemoveItem(ItemData data, int number)

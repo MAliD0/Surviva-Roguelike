@@ -1,42 +1,45 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
-using UnityEngine;
-
-[Serializable]
-public class AlchemyItemStackData 
+[System.Serializable]
+public class AlchemyItemStackData
 {
     public QualityTier qualityTier = QualityTier.Stable;
-    public AlchemyItemData alchemyItemData;
+    public float residueRatio;
 
-    public bool hasCustomAspectProfile = false;
+    public bool hasCustomAspectProfile;
     public AspectProfile customAspectProfile;
 
-    public AlchemyItemStackData(
-        QualityTier qualityTier, 
-        AlchemyItemData alchemyItemData
-    )
+    public AlchemyItemStackData()
     {
-        this.qualityTier =qualityTier;
-        this.alchemyItemData = alchemyItemData;
     }
 
-    public bool SetCustomAspectProfile(AspectProfile customAspectProfile)
+    public AlchemyItemStackData(QualityTier qualityTier)
     {
-        if(!alchemyItemData.aspectProfile.IsEmpty()) return false;
-        else
-        {
-            this.customAspectProfile = customAspectProfile;
-            hasCustomAspectProfile = true;
-            return true;
-        }
+        this.qualityTier = qualityTier;
+    }
+
+    public bool SetCustomAspectProfile(AspectProfile profile)
+    {
+        if (profile == null || profile.IsEmpty())
+            return false;
+
+        customAspectProfile = profile.Clone();
+        hasCustomAspectProfile = true;
+        return true;
+    }
+
+    public AspectProfile GetEffectiveProfile(AlchemyItemData baseItem)
+    {
+        if (hasCustomAspectProfile && customAspectProfile != null)
+            return customAspectProfile;
+
+        return baseItem != null ? baseItem.aspectProfile : null;
     }
 
     public AlchemyItemStackData Clone()
     {
-        return new AlchemyItemStackData(qualityTier, alchemyItemData)
+        return new AlchemyItemStackData
         {
+            qualityTier = qualityTier,
+            residueRatio = residueRatio,
             hasCustomAspectProfile = hasCustomAspectProfile,
             customAspectProfile = customAspectProfile != null
                 ? customAspectProfile.Clone()

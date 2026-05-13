@@ -9,9 +9,4 @@ public class ResidueItemData : AlchemyItemData
         category = AlchemyItemCategory.Residue;
         isStackable = false; // for now, until stack data supports residue identity
     }
-
-    public void SetAspectProfile(AspectProfile aspectProfile)
-    {
-        this.aspectProfile = aspectProfile;
-    }
 }

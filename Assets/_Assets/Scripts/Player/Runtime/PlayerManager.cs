@@ -214,6 +214,10 @@ public class PlayerManager : NetworkBehaviour
     {
         inventory.AddItem(itemData, number);
     }
+    public int AddItem(ItemSlot itemSlot)
+    {
+        return inventory.AddItem(itemSlot);
+    }
     public void RemoveItem(ItemData itemData, int number)
     {
         inventory.RemoveItem(itemData, number);

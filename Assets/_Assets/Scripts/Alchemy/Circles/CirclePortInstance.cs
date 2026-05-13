@@ -39,11 +39,18 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
 
     public int SetItem(ItemSlot itemSlot)
     {
-        currentItem = itemSlot;
+        if (itemSlot == null || itemSlot.itemData == null || itemSlot.amount <= 0)
+        {
+            Clear();
+            return 0;
+        }
+
+        currentItem = new ItemSlot(itemSlot);
+
+        onItemUpdate?.Invoke(currentItem);
 
         return 0;
     }
-
 
     public bool CanAddItem(ItemData itemData)
     {
@@ -82,12 +89,28 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
             break;
 
             case CirclePortType.ItemOutput:
-                if(this.currentItem.itemData != null)
+            case CirclePortType.ResidueOutput:
+            {
+                if (currentItem != null && !currentItem.IsEmpty())
                 {
-                    playerManager.AddItem(currentItem.itemData, currentItem.amount); 
-                    Clear();
+                    ItemSlot copy = new ItemSlot(currentItem);
+
+                    int leftover = playerManager.AddItem(copy);
+
+                    if (leftover <= 0)
+                    {
+                        Clear();
+                    }
+                    else
+                    {
+                        currentItem.amount = leftover;
+                        onItemUpdate?.Invoke(currentItem);
+                    }
                 }
-            break;
+
+                break;
+            }
+            
         }
 
 
