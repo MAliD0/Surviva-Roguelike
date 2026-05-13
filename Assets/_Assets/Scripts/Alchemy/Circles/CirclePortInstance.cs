@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
 {
@@ -35,6 +36,14 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
 
         return amountLeft;
     }
+
+    public int SetItem(ItemSlot itemSlot)
+    {
+        currentItem = itemSlot;
+
+        return 0;
+    }
+
 
     public bool CanAddItem(ItemData itemData)
     {

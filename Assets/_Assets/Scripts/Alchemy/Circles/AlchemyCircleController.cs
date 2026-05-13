@@ -41,6 +41,12 @@ public class AlchemyCircleController : MonoBehaviour, IInteractable
     [Button]
     public void ExecuteCircle()
     {
+        if(!residuePort.IsEmpty) return;
+        foreach (var item in outputPorts)
+        {
+            if(!item.IsEmpty) return;
+        }
+
         List<ItemSlot> inputItems = new List<ItemSlot>();
 
         foreach (var item in inputPorts)
@@ -58,7 +64,32 @@ public class AlchemyCircleController : MonoBehaviour, IInteractable
 
         ClearInputPorts();
 
-        outputPorts[0].AddItem(lastResult.outputItem, 1);
+        if (!lastResult.residueProfile.IsEmpty())
+        {
+            ItemSlot itemSlot = CreateResidue(lastResult.residueProfile);
+
+            residuePort.SetItem(itemSlot);
+        }
+
+        if(lastResult.success == true)
+        {
+            if(outputPorts.Count > 0)
+            {
+                outputPorts[0].AddItem(lastResult.outputItem, 1);        
+            }        
+        }
+    }
+
+    private ItemSlot CreateResidue(AspectProfile customAspectProfile)
+    {
+        ResidueItemData residueItemData = AlchemyItemDatabase.Instance.GetResidueItem();
+
+        AlchemyItemStackData alchemyItemStackData = 
+        new AlchemyItemStackData(QualityTier.Impure,residueItemData);
+
+        alchemyItemStackData.SetCustomAspectProfile(customAspectProfile);
+
+        return new ItemSlot(residueItemData, 1, alchemyItemStackData);
     }
 
     public void OnInteract(GameObject interactor, ulong interacterId)

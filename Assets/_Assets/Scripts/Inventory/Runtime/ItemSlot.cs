@@ -6,21 +6,36 @@ public class ItemSlot
 {
     public ItemData itemData; //{ get; private set; }
     public int amount;
+    public AlchemyItemStackData alchemyData;
 
     public ItemSlot()
     {
         itemData = null;
         amount = 0;
+        alchemyData = null;
     }
-    public ItemSlot(ItemData data, int num = 0)
+
+    public ItemSlot(ItemData data, int amount = 0)
     {
         this.itemData = data;
-        this.amount = num;
+        this.amount = amount;
+        this.alchemyData = null;
     }
+
+    public ItemSlot(ItemData data, int amount, AlchemyItemStackData alchemyData)
+    {
+        this.itemData = data;
+        this.amount = amount;
+        this.alchemyData = alchemyData;
+    }
+
     public ItemSlot(ItemSlot itemSlot)
     {
-        this.itemData = itemSlot.itemData;
-        this.amount = itemSlot.amount;
+        itemData = itemSlot.itemData;
+        amount = itemSlot.amount;
+        alchemyData = itemSlot.alchemyData != null
+            ? itemSlot.alchemyData.Clone()
+            : null;
     }
 
     public bool IsFull()
@@ -63,15 +78,19 @@ public class ItemSlot
     }
     public void SetItemData(ItemSlot item)
     {
-        if(item == null)
+        if (item == null)
         {
             itemData = null;
             amount = 0;
+            alchemyData = null;
         }
         else
         {
-            this.itemData = item.itemData;
-            this.amount = item.amount;
+            itemData = item.itemData;
+            amount = item.amount;
+            alchemyData = item.alchemyData != null
+                ? item.alchemyData.Clone()
+                : null;
         }
     }
 }

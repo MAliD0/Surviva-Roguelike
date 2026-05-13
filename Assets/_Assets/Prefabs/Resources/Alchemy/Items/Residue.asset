@@ -19,8 +19,6 @@ MonoBehaviour:
   aspectProfile:
     aspects: []
   complexity: 1
-  excludeFromNormalMatching: 0
-  alchemyDescription: 
-  category: 0
   excludeFromNormalMatching: 1
+  alchemyDescription: 
   category: 4
