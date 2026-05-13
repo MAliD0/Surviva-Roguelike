@@ -10,23 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d3a384af40ef3bf4e98c3b0f98882778, type: 3}
-  m_Name: Boat
+  m_Name: FireCircle
   m_EditorClassIdentifier: 
-  itemIcon: {fileID: -7989788466274553411, guid: ea7d1555bb7ad4b43bf9e5b48aac25f7, type: 3}
+  itemIcon: {fileID: 0}
   itemType: 1
   isStackable: 0
   maxStack: 24
-  isCraftable: 0
-  recipeItems: []
-  craftAmount: 1
-  mapBlockType: 0
-  tile: {fileID: 11400000, guid: bbec4724028ba5645b8898c9f149a4ff, type: 2}
-  gameObject: {fileID: 0}
-  mapLayerType: 0
+  mapBlockType: 1
+  tile: {fileID: 0}
+  gameObject: {fileID: 1144850320350174504, guid: 2c7dadc336b5f5f4fa68dd4dddcb655c, type: 3}
+  mapLayerType: 3
   isMultiblock: 1
   breakable: 1
+  gridAligned: 0
   maxHealth: 5
-  blockSize: {x: 0, y: 0}
+  blockSize: {x: 24, y: 24}
   tileOffsets: []
   hasLoot: 1
   dropSelf: 1

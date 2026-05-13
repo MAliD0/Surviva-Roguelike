@@ -145,4 +145,20 @@ public class ItemSlot
         amount = 0;
         alchemyData = null;
     }
+
+    public string GetDebugDescription()
+    {
+        string text = itemData != null ? itemData.name : "Empty";
+
+        if (alchemyData != null)
+        {
+            text += $"\nQuality: {alchemyData.qualityTier}";
+            text += $"\nResidue Ratio: {alchemyData.residueRatio}";
+
+            if (alchemyData.hasCustomAspectProfile && alchemyData.customAspectProfile != null)
+                text += $"\nCustom Profile: {alchemyData.customAspectProfile}";
+        }
+
+        return text;
+    }
 }

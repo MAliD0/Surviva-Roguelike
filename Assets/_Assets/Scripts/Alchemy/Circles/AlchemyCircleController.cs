@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Sirenix.OdinInspector;
@@ -41,42 +40,59 @@ public class AlchemyCircleController : MonoBehaviour, IInteractable
     [Button]
     public void ExecuteCircle()
     {
-        if(!residuePort.IsEmpty) return;
-        foreach (var item in outputPorts)
+        if (residuePort != null && !residuePort.IsEmpty)
+            return;
+
+        foreach (var port in outputPorts)
         {
-            if(!item.IsEmpty) return;
+            if (port != null && !port.IsEmpty)
+                return;
         }
 
         List<ItemSlot> inputItems = new List<ItemSlot>();
 
-        foreach (var item in inputPorts)
+        foreach (var port in inputPorts)
         {
-            inputItems.Add(item.currentItem);
+            if (port != null && port.currentItem != null && !port.currentItem.IsEmpty())
+                inputItems.Add(new ItemSlot(port.currentItem));
+        }
+
+        if (inputItems.Count == 0)
+        {
+            Debug.LogWarning("[AlchemyCircle] No input items.");
+            return;
         }
 
         AlchemyRequest alchemyRequest = new AlchemyRequest();
-
         alchemyRequest.inputItems = inputItems;
         alchemyRequest.processType = AlchemyProcessType.Transmute;
         alchemyRequest.circle = circleInstance;
 
         lastResult = alchemyEngine.Execute(alchemyRequest);
 
-        ClearInputPorts();
+        if (lastResult == null || !lastResult.success || lastResult.outputItem == null)
+        {
+            Debug.LogWarning($"[AlchemyCircle] Failed: {lastResult?.failureReason}");
+            return;
+        }
+
+        if (outputPorts.Count <= 0 || outputPorts[0] == null)
+        {
+            Debug.LogWarning("[AlchemyCircle] No output port.");
+            return;
+        }
+
+        outputPorts[0].AddItem(lastResult.outputItem, 1);
 
         if (lastResult.residueProfile != null && !lastResult.residueProfile.IsEmpty())
         {
             ItemSlot residueSlot = CreateResidue(lastResult.residueProfile);
-            residuePort.SetItem(residueSlot);
+
+            if (residuePort != null)
+                residuePort.SetItem(residueSlot);
         }
 
-        if(lastResult.success == true)
-        {
-            if(outputPorts.Count > 0)
-            {
-                outputPorts[0].AddItem(lastResult.outputItem, 1);        
-            }        
-        }
+        ClearInputPorts();
     }
 
     private ItemSlot CreateResidue(AspectProfile customAspectProfile)

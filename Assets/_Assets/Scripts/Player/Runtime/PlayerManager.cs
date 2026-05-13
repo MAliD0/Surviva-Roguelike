@@ -89,6 +89,8 @@ public class PlayerManager : NetworkBehaviour
     {
         ItemSlot itemSlot = inventory.GetInventoryItems()[index];
         itemHeld = itemSlot;
+        
+        print(itemHeld.GetDebugDescription());
     }
 
     private void OnLeftClick(Vector2 worldPosition)

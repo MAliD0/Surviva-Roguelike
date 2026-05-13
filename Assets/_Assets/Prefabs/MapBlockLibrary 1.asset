@@ -38,3 +38,5 @@ MonoBehaviour:
       Value: {fileID: 11400000, guid: c7f495022fc4a0845b86aaa711b1d2a8, type: 2}
     - Key: Rock
       Value: {fileID: 11400000, guid: 8271f014247d35b42b5538f0793abfda, type: 2}
+    - Key: FireCircleInstance
+      Value: {fileID: 11400000, guid: e9e913f9be532ea498bcd39353f3c921, type: 2}
