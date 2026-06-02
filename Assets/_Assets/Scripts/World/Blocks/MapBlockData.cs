@@ -66,7 +66,10 @@ public class MapBlockData : ItemData
         }
         else if(mapBlockType == MapBlockType.GameObject) 
         {
-            return gameObject.name;
+            if(gameObject != null)
+                return gameObject.name;
+            else
+                return this.name;
         }else { 
             return base.GetItemID();
         }

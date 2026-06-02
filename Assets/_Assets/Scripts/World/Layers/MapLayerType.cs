@@ -1,7 +1,7 @@
 public enum MapLayerType
 {
-    backGround,
-    foreGround,
-    mediumLayer,
-    circleElementLayer
+    backGround = 0,
+    foreGround = 1,
+    mediumLayer = 2,
+    circleElementLayer = 3
 }

@@ -40,6 +40,14 @@ public class MapPlacementValidator
 
     public PlacementResult Validate(Vector2 worldPosition, MapBlockData blockData)
     {
+        Debug.Log(
+            $"[Place Validate] item={blockData.name}, " +
+            $"mapBlockType={blockData.mapBlockType}, " +
+            $"mapLayerType={blockData.mapLayerType}, " +
+            $"blockSize={blockData.blockSize}, " +
+            $"gridAligned={blockData.gridAligned}"
+        );
+
         if (blockData == null)
         {
             return PlacementResult.Fail(
@@ -141,11 +149,26 @@ public class MapPlacementValidator
             blockData.blockSize.y
         );
 
-        if (mediumLayerOccupied)
+        if (!mediumLayerOccupied)
         {
             return PlacementResult.Fail(
                 PlacementFailReason.MissingTargetLayer,
                 $"circle element object cannot be placed on not occupied medium layer at {worldPosition}."
+            );
+        }
+
+        MapLayerLogic circleElementLayer = getLayer?.Invoke(MapLayerType.circleElementLayer);
+
+        bool circleElementLayerOccupied = circleElementLayer.IsFootprintOccupied(
+            worldPosition,
+            blockData.blockSize.x,
+            blockData.blockSize.y);
+
+        if (circleElementLayerOccupied)
+        {
+            return PlacementResult.Fail(
+                PlacementFailReason.Occupied,
+                $"circle element object cannot be placed on occupied circleElement layer at {worldPosition}."
             );
         }
 

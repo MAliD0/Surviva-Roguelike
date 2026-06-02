@@ -6,23 +6,44 @@ using Sirenix.OdinInspector;
 public class MapBlockDataLibrary : ScriptableObject
 {
     [ReadOnly][SerializeField] SerializedDictionary<string, MapBlockData> dataLibrary;
+    [SerializeField] private string[] resourceFolders =
+    {
+        "Tiles",
+        "Alchemy/Items"
+    };
 
     [Button("Generate Library")]
     public void GenerateLibrary()
     {
-        MapBlockData[] assets = Resources.LoadAll<MapBlockData>("Tiles");
-        foreach (MapBlockData asset in assets)
+        dataLibrary ??= new SerializedDictionary<string, MapBlockData>();
+        dataLibrary.Clear();
+
+        foreach (string folder in resourceFolders)
         {
-            if (!dataLibrary.ContainsKey(asset.GetItemID()))
+            MapBlockData[] assets = Resources.LoadAll<MapBlockData>(folder);
+
+            foreach (MapBlockData asset in assets)
             {
-                dataLibrary.Add(asset.GetItemID(), asset);
-            }
-            else
-            {
-                Debug.LogWarning($"Item {asset.GetItemID()} already has instance");
+                if (asset == null)
+                    continue;
+
+                string id = asset.GetItemID();
+
+                if (!dataLibrary.ContainsKey(id))
+                    dataLibrary.Add(id, asset);
+                else
+                    Debug.LogWarning($"Block {id} already has instance");
             }
         }
     }
+
+    [Button("Reset Library")]
+    public void ResetLibrary()
+    {
+        dataLibrary ??= new SerializedDictionary<string, MapBlockData>();
+        dataLibrary.Clear();
+    }
+
 
     public void AddData(MapBlockData mapBlockData)
     {

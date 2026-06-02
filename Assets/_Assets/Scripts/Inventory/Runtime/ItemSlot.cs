@@ -81,13 +81,17 @@ public class ItemSlot
         if (itemData != other.itemData)
             return false;
 
-        // For now: any custom alchemy data means do not stack.
+        if (!itemData.isStackable)
+            return false;
+
+        // For now: custom alchemy stacks do not stack.
+        // This protects Residue and future custom-profile items.
         if (alchemyData != null || other.alchemyData != null)
             return false;
 
         return true;
     }
-
+    
     // returns leftover
     public int AddCount(int count)
     {

@@ -135,53 +135,50 @@ public class Inventory : MonoBehaviour
     
     public void MoveItems(int from, int to)
     {
-        if (from > slots.Count && from < 0) return;
-        if (to > slots.Count && to < 0) return;
+        if (from < 0 || from >= slots.Count) return;
+        if (to < 0 || to >= slots.Count) return;
+        if (from == to) return;
 
-        ItemSlot a = slots[from];
-        ItemSlot b = slots[to];
+        ItemSlot source = slots[from];
+        ItemSlot target = slots[to];
 
-        if (a == null && b == null) return;
+        if (source == null || source.IsEmpty())
+            return;
 
-        if(b.itemData == null)
+        if (target == null)
+            return;
+
+        // Move into empty slot.
+        if (target.IsEmpty())
         {
-            b.SetItemData(a);
-            a.SetItemData(null);
-            
+            target.SetItemData(source);
+            source.Clear();
+
             onInventoryUpdate?.Invoke();
             return;
         }
 
-        if(a.itemData == null)
+        // If cannot stack, swap.
+        if (!target.CanStackWith(source))
         {
-            a.SetItemData(b);
-            b.SetItemData(a);
+            ItemSlot sourceCopy = new ItemSlot(source);
+            ItemSlot targetCopy = new ItemSlot(target);
 
-            onInventoryUpdate?.Invoke();
-            return; 
-        }
-
-        if(a.itemData != b.itemData)
-        {
-            ItemSlot aSlot = new ItemSlot(a);
-            ItemSlot bSlot = new ItemSlot(b);
-
-            a.SetItemData(bSlot);
-            b.SetItemData(aSlot);
+            source.SetItemData(targetCopy);
+            target.SetItemData(sourceCopy);
 
             onInventoryUpdate?.Invoke();
             return;
         }
-        else
-        {
-            int excess = b.AddCount(a.amount);
-            a.RemoveCount(a.amount-excess);
 
-            onInventoryUpdate?.Invoke();
-            return;
-        }
+        // Stack compatible items.
+        int leftover = target.AddCount(source.amount);
+        int moved = source.amount - leftover;
+
+        source.RemoveCount(moved);
+
+        onInventoryUpdate?.Invoke();
     }
-
     public List<ItemSlot> GetInventoryItems()
     {
         return slots;
