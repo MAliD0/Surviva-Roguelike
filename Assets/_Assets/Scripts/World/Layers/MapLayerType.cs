@@ -1,7 +1,7 @@
 public enum MapLayerType
 {
-    onBoatGround,
     backGround,
-    boatGround,
-    foreGround
+    foreGround,
+    mediumLayer,
+    circleElementLayer
 }

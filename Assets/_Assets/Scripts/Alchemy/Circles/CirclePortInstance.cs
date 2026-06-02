@@ -8,7 +8,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
     public ItemSlot currentItem = new ItemSlot();
     public float storedEnergy;
 
-    public Action<ItemSlot> onItemUpdate;
+    public event Action<ItemSlot> OnItemChanged;
 
     public bool IsEmpty => currentItem.itemData == null;
     public bool HasSpace => IsEmpty || !currentItem.IsFull();
@@ -32,7 +32,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
             amountLeft = currentItem.AddCount(amount);
         }
         
-        onItemUpdate?.Invoke(currentItem);
+        OnItemChanged?.Invoke(currentItem);
 
         return amountLeft;
     }
@@ -47,7 +47,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
 
         currentItem = new ItemSlot(itemSlot);
 
-        onItemUpdate?.Invoke(currentItem);
+        OnItemChanged?.Invoke(currentItem);
 
         return 0;
     }
@@ -65,7 +65,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
     public void Clear()
     {
         currentItem = new ItemSlot();
-        onItemUpdate?.Invoke(currentItem);
+        OnItemChanged?.Invoke(currentItem);
     }
 
     public bool ContainsItem(ItemData itemData)
@@ -104,7 +104,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
                     else
                     {
                         currentItem.amount = leftover;
-                        onItemUpdate?.Invoke(currentItem);
+                        OnItemChanged?.Invoke(currentItem);
                     }
                 }
 
@@ -123,7 +123,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
         if(CanRemoveItem(itemData))
             amounLeft = currentItem.RemoveCount(amount);
 
-        onItemUpdate?.Invoke(currentItem);
+        OnItemChanged?.Invoke(currentItem);
         
         return amounLeft;
     }

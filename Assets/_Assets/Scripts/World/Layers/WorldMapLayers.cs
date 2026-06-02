@@ -4,13 +4,13 @@ public class WorldMapLayers
 {
     private readonly MapLayerGraphics baseLayerGraphics;
     private readonly MapLayerGraphics foreLayerGraphics;
-    private readonly MapLayerGraphics boatLayerGraphics;
-    private readonly MapLayerGraphics onBoatLayerGraphics;
+    private readonly MapLayerGraphics mediumLayerGraphics;
+    private readonly MapLayerGraphics circleElementLayerGraphics;
 
     public MapLayerLogic BaseLayer { get; private set; }
     public MapLayerLogic ForeLayer { get; private set; }
-    public MapLayerLogic BoatLayer { get; private set; }
-    public MapLayerLogic OnBoatLayer { get; private set; }
+    public MapLayerLogic MediumLayer { get; private set; }
+    public MapLayerLogic CircleElementLayer { get; private set; }
 
     public WorldMapLayers(
         MapBounds bounds,
@@ -22,8 +22,8 @@ public class WorldMapLayers
     {
         this.baseLayerGraphics = baseLayerGraphics;
         this.foreLayerGraphics = foreLayerGraphics;
-        this.boatLayerGraphics = boatLayerGraphics;
-        this.onBoatLayerGraphics = onBoatLayerGraphics;
+        this.mediumLayerGraphics = boatLayerGraphics;
+        this.circleElementLayerGraphics = onBoatLayerGraphics;
 
         Rebuild(bounds);
     }
@@ -38,16 +38,16 @@ public class WorldMapLayers
     {
         BaseLayer = new MapLayerLogic(bounds);
         ForeLayer = new MapLayerLogic(bounds);
-        BoatLayer = new MapLayerLogic(bounds);
-        OnBoatLayer = new MapLayerLogic(bounds);
+        MediumLayer = new MapLayerLogic(bounds);
+        CircleElementLayer = new MapLayerLogic(bounds);
     }
 
     private void InitGraphics()
     {
         baseLayerGraphics?.Init(BaseLayer);
         foreLayerGraphics?.Init(ForeLayer);
-        boatLayerGraphics?.Init(BoatLayer);
-        onBoatLayerGraphics?.Init(OnBoatLayer);
+        mediumLayerGraphics?.Init(MediumLayer);
+        circleElementLayerGraphics?.Init(CircleElementLayer);
     }
 
     public MapLayerLogic GetLayer(MapLayerType type)
@@ -60,11 +60,11 @@ public class WorldMapLayers
             case MapLayerType.foreGround:
                 return ForeLayer;
 
-            case MapLayerType.boatGround:
-                return BoatLayer;
+            case MapLayerType.mediumLayer:
+                return MediumLayer;
 
-            case MapLayerType.onBoatGround:
-                return OnBoatLayer;
+            case MapLayerType.circleElementLayer:
+                return CircleElementLayer;
 
             default:
                 return null;
@@ -81,11 +81,11 @@ public class WorldMapLayers
             case MapLayerType.foreGround:
                 return foreLayerGraphics;
 
-            case MapLayerType.boatGround:
-                return boatLayerGraphics;
+            case MapLayerType.mediumLayer:
+                return mediumLayerGraphics;
 
-            case MapLayerType.onBoatGround:
-                return onBoatLayerGraphics;
+            case MapLayerType.circleElementLayer:
+                return circleElementLayerGraphics;
 
             default:
                 return baseLayerGraphics;
@@ -94,22 +94,22 @@ public class WorldMapLayers
 
     public void ClearTilemaps()
     {
-        onBoatLayerGraphics?.ClearTilemap();
+        circleElementLayerGraphics?.ClearTilemap();
         baseLayerGraphics?.ClearTilemap();
         foreLayerGraphics?.ClearTilemap();
-        boatLayerGraphics?.ClearTilemap();
+        mediumLayerGraphics?.ClearTilemap();
     }
 
     public void ClearLayerData()
     {
-        OnBoatLayer?.LayerTiles.Clear();
+        CircleElementLayer?.LayerTiles.Clear();
         BaseLayer?.LayerTiles.Clear();
-        BoatLayer?.LayerTiles.Clear();
+        MediumLayer?.LayerTiles.Clear();
         ForeLayer?.LayerTiles.Clear();
 
-        OnBoatLayer?.anchorHp.Clear();
+        CircleElementLayer?.anchorHp.Clear();
         BaseLayer?.anchorHp.Clear();
-        BoatLayer?.anchorHp.Clear();
+        MediumLayer?.anchorHp.Clear();
         ForeLayer?.anchorHp.Clear();
     }
 }

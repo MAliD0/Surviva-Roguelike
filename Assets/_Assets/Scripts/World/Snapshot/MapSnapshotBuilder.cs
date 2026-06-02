@@ -16,8 +16,8 @@ public class MapSnapshotBuilder
 
         AddLayerSnapshot(MapLayerType.backGround, world.GetLayer(MapLayerType.backGround), result);
         AddLayerSnapshot(MapLayerType.foreGround, world.GetLayer(MapLayerType.foreGround), result);
-        AddLayerSnapshot(MapLayerType.boatGround, world.GetLayer(MapLayerType.boatGround), result);
-        AddLayerSnapshot(MapLayerType.onBoatGround, world.GetLayer(MapLayerType.onBoatGround), result);
+        AddLayerSnapshot(MapLayerType.mediumLayer, world.GetLayer(MapLayerType.mediumLayer), result);
+        AddLayerSnapshot(MapLayerType.circleElementLayer, world.GetLayer(MapLayerType.circleElementLayer), result);
 
         return result;
     }

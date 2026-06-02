@@ -17,7 +17,9 @@ MonoBehaviour:
     _serializedList:
     - Key: Acorn
       Value: {fileID: 11400000, guid: 2141cbf7b0f5abb448528cd55857b904, type: 2}
-    - Key: Coal
+    - Key: ChalkTile
+      Value: {fileID: 11400000, guid: 788aa13a04886464889e0dcd59d109b1, type: 2}
+    - Key: Charcoal
       Value: {fileID: 11400000, guid: 58627b1256382124b842a73c0d6fb4e3, type: 2}
     - Key: HillTile
       Value: {fileID: 11400000, guid: dd157aea13dae5f41926a65014917b6e, type: 2}
@@ -27,5 +29,7 @@ MonoBehaviour:
       Value: {fileID: 11400000, guid: 569a7c5190ddb2448a89f1c8240a6a6b, type: 2}
     - Key: Stone
       Value: {fileID: 11400000, guid: 884b7cdba5c4bbd418e3c718b4d19d92, type: 2}
+    - Key: Twig
+      Value: {fileID: 11400000, guid: c2576be059d6eee47a67c213896b9a85, type: 2}
     - Key: Wood
       Value: {fileID: 11400000, guid: 51956b3bf1d493e448ba5933ea0f21df, type: 2}

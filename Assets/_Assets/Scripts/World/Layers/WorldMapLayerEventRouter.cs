@@ -40,8 +40,8 @@ public class WorldMapLayerEventRouter
 
         MapLayerLogic baseLayer = getLayer?.Invoke(MapLayerType.backGround);
         MapLayerLogic foreLayer = getLayer?.Invoke(MapLayerType.foreGround);
-        MapLayerLogic boatLayer = getLayer?.Invoke(MapLayerType.boatGround);
-        MapLayerLogic onBoatLayer = getLayer?.Invoke(MapLayerType.onBoatGround);
+        MapLayerLogic boatLayer = getLayer?.Invoke(MapLayerType.mediumLayer);
+        MapLayerLogic onBoatLayer = getLayer?.Invoke(MapLayerType.circleElementLayer);
 
         if (baseLayer != null)
         {
@@ -57,14 +57,14 @@ public class WorldMapLayerEventRouter
 
         if (boatLayer != null)
         {
-            boatLayer.onMapTilePlaced += OnBoatLayerTilePlaced;
-            boatLayer.onMapTileRemoved += OnBoatLayerTileRemoved;
+            boatLayer.onMapTilePlaced += OnMediumLayerTilePlaced;
+            boatLayer.onMapTileRemoved += OnMediumLayerTileRemoved;
         }
 
         if (onBoatLayer != null)
         {
-            onBoatLayer.onMapTilePlaced += OnOnBoatLayerTilePlaced;
-            onBoatLayer.onMapTileRemoved += OnOnBoatLayerTileRemoved;
+            onBoatLayer.onMapTilePlaced += OnCircleElementLayerTilePlaced;
+            onBoatLayer.onMapTileRemoved += OnCircleElemtLayerTileRemoved;
         }
     }
 
@@ -77,8 +77,8 @@ public class WorldMapLayerEventRouter
 
         MapLayerLogic baseLayer = getLayer?.Invoke(MapLayerType.backGround);
         MapLayerLogic foreLayer = getLayer?.Invoke(MapLayerType.foreGround);
-        MapLayerLogic boatLayer = getLayer?.Invoke(MapLayerType.boatGround);
-        MapLayerLogic onBoatLayer = getLayer?.Invoke(MapLayerType.onBoatGround);
+        MapLayerLogic mediumLayer = getLayer?.Invoke(MapLayerType.mediumLayer);
+        MapLayerLogic circleElementLayer = getLayer?.Invoke(MapLayerType.circleElementLayer);
 
         if (baseLayer != null)
         {
@@ -92,16 +92,16 @@ public class WorldMapLayerEventRouter
             foreLayer.onMapTileRemoved -= OnForeLayerTileRemoved;
         }
 
-        if (boatLayer != null)
+        if (mediumLayer != null)
         {
-            boatLayer.onMapTilePlaced -= OnBoatLayerTilePlaced;
-            boatLayer.onMapTileRemoved -= OnBoatLayerTileRemoved;
+            mediumLayer.onMapTilePlaced -= OnMediumLayerTilePlaced;
+            mediumLayer.onMapTileRemoved -= OnMediumLayerTileRemoved;
         }
 
-        if (onBoatLayer != null)
+        if (circleElementLayer != null)
         {
-            onBoatLayer.onMapTilePlaced -= OnOnBoatLayerTilePlaced;
-            onBoatLayer.onMapTileRemoved -= OnOnBoatLayerTileRemoved;
+            circleElementLayer.onMapTilePlaced -= OnCircleElementLayerTilePlaced;
+            circleElementLayer.onMapTileRemoved -= OnCircleElemtLayerTileRemoved;
         }
     }
 
@@ -121,20 +121,20 @@ public class WorldMapLayerEventRouter
         onTilePlaced?.Invoke(MapLayerType.foreGround, cells, data);
     }
 
-    private void OnBoatLayerTilePlaced(
+    private void OnMediumLayerTilePlaced(
         Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
         MapBlockData data
     )
     {
-        onTilePlaced?.Invoke(MapLayerType.boatGround, cells, data);
+        onTilePlaced?.Invoke(MapLayerType.mediumLayer, cells, data);
     }
 
-    private void OnOnBoatLayerTilePlaced(
+    private void OnCircleElementLayerTilePlaced(
         Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
         MapBlockData data
     )
     {
-        onTilePlaced?.Invoke(MapLayerType.onBoatGround, cells, data);
+        onTilePlaced?.Invoke(MapLayerType.circleElementLayer, cells, data);
     }
 
     private void OnBaseLayerTileRemoved(
@@ -153,19 +153,19 @@ public class WorldMapLayerEventRouter
         onTileRemoved?.Invoke(MapLayerType.foreGround, cells, type);
     }
 
-    private void OnBoatLayerTileRemoved(
+    private void OnMediumLayerTileRemoved(
         Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
         MapBlockType type
     )
     {
-        onTileRemoved?.Invoke(MapLayerType.boatGround, cells, type);
+        onTileRemoved?.Invoke(MapLayerType.mediumLayer, cells, type);
     }
 
-    private void OnOnBoatLayerTileRemoved(
+    private void OnCircleElemtLayerTileRemoved(
         Dictionary<Vector2Int, HashSet<Vector2Int>> cells,
         MapBlockType type
     )
     {
-        onTileRemoved?.Invoke(MapLayerType.onBoatGround, cells, type);
+        onTileRemoved?.Invoke(MapLayerType.circleElementLayer, cells, type);
     }
 }

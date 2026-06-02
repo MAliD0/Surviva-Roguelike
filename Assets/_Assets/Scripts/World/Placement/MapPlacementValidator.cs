@@ -83,8 +83,11 @@ public class MapPlacementValidator
             case MapLayerType.foreGround:
                 return ValidateForegroundPlacement(worldPosition, blockData);
 
-            case MapLayerType.onBoatGround:
-                return ValidateOnBoatGroundPlacement(worldPosition, blockData);
+            case MapLayerType.mediumLayer:
+                return ValidateForegroundPlacement(worldPosition, blockData);
+
+            case MapLayerType.circleElementLayer:
+                return ValidateCircleElementPlacement(worldPosition, blockData);
 
             default:
                 return PlacementResult.Ok();
@@ -120,29 +123,29 @@ public class MapPlacementValidator
         return PlacementResult.Ok();
     }
 
-    private PlacementResult ValidateOnBoatGroundPlacement(Vector2 worldPosition, MapBlockData blockData)
+    private PlacementResult ValidateCircleElementPlacement(Vector2 worldPosition, MapBlockData blockData)
     {
-        MapLayerLogic baseLayer = getLayer?.Invoke(MapLayerType.backGround);
+        MapLayerLogic mediumLayer = getLayer?.Invoke(MapLayerType.mediumLayer);
 
-        if (baseLayer == null)
+        if (mediumLayer == null)
         {
             return PlacementResult.Fail(
                 PlacementFailReason.MissingTargetLayer,
-                "Base layer is missing. Cannot validate onBoatGround rule."
+                "Medium layer is missing. Cannot validate CircleElement rule."
             );
         }
 
-        bool baseLayerOccupied = baseLayer.IsFootprintOccupied(
+        bool mediumLayerOccupied = mediumLayer.IsFootprintOccupied(
             worldPosition,
             blockData.blockSize.x,
             blockData.blockSize.y
         );
 
-        if (baseLayerOccupied)
+        if (mediumLayerOccupied)
         {
             return PlacementResult.Fail(
-                PlacementFailReason.InvalidLayerRule,
-                $"onBoatGround object cannot be placed on occupied background/base layer at {worldPosition}."
+                PlacementFailReason.MissingTargetLayer,
+                $"circle element object cannot be placed on not occupied medium layer at {worldPosition}."
             );
         }
 

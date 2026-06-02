@@ -132,17 +132,15 @@ public class PlayerManager : NetworkBehaviour
         IInteractable[] interactables =
             playerInteractionManager.CastForInteractables(transform.position, castRadius);
 
-        Debug.Log($"Interactables found: {interactables.Length}");
-
-        for (int i = 0; i < interactables.Length; i++)
-        {
-            Debug.Log($"Interactable[{i}] = {interactables[i].GetType().Name}");
-        }
-
         if (interactables.Length <= 0)
             return;
 
-        interactables[0].OnInteract(gameObject, OwnerClientId);
+        IInteractable closest = playerInteractionManager.GetClosestInteractable(interactables);
+
+        if (closest == null)
+            return;
+
+        closest.OnInteract(gameObject, OwnerClientId);
     }
 
     private void OnMessageSent(string text)

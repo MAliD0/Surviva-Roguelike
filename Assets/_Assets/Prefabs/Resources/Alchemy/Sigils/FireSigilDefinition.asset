@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ff7213653ec76d45b9b8d4ef6404a4f, type: 3}
+  m_Name: FireSigilDefinition
+  m_EditorClassIdentifier: 
+  id: 
+  displayName: FireSigil
+  element: 1
+  aspectModifiers:
+  - aspect: {fileID: 11400000, guid: d81d8a7fe9c92ff47b545e805c68031e, type: 2}
+    multiplier: 1.2
+    flatChange: 0
+    canCreateIfMissing: 0
+  - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
+    multiplier: 0.5
+    flatChange: 0
+    canCreateIfMissing: 0
+  conversionRules:
+  - inputAspect: {fileID: 11400000, guid: 63e9be04eb8ea9f46a185cdf45c11890, type: 2}
+    inputAmount: 2
+    outputAspects:
+    - aspect: {fileID: 11400000, guid: 07d89bf43d5f0f740968da363f2882ee, type: 2}
+      amount: 1
+    - aspect: {fileID: 11400000, guid: d81d8a7fe9c92ff47b545e805c68031e, type: 2}
+      amount: 1
+    efficiency: 1

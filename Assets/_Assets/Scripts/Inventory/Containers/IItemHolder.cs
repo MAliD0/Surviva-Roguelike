@@ -5,6 +5,8 @@ public interface IItemHolder
     bool IsEmpty { get; }
     bool HasSpace { get; }
 
+    event Action<ItemSlot> OnItemChanged;
+
     ItemData CurrentItemData { get; }
     int CurrentAmount { get; }
     int MaxAmount { get; }

@@ -30,4 +30,31 @@ public class PlayerInteractionManager : MonoBehaviour
 
         return interactables.ToArray();
     }
+    public IInteractable GetClosestInteractable(IInteractable[] interactables)
+    {
+        IInteractable closest = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (IInteractable interactable in interactables)
+        {
+            if (interactable == null)
+                continue;
+
+            if (interactable is not MonoBehaviour mono)
+                continue;
+
+            float distance = Vector2.Distance(
+                transform.position,
+                mono.transform.position
+            );
+
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = interactable;
+            }
+        }
+
+        return closest;
+    }
 }

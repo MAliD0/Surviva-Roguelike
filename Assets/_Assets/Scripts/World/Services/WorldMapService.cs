@@ -150,8 +150,8 @@ public class WorldMapService
     {
         MapLayerLogic foreLayer = getLayer?.Invoke(MapLayerType.foreGround);
         MapLayerLogic baseLayer = getLayer?.Invoke(MapLayerType.backGround);
-        MapLayerLogic onBoatLayer = getLayer?.Invoke(MapLayerType.onBoatGround);
-        MapLayerLogic boatLayer = getLayer?.Invoke(MapLayerType.boatGround);
+        MapLayerLogic mediumLayer = getLayer?.Invoke(MapLayerType.mediumLayer);
+        MapLayerLogic circleElementLayer = getLayer?.Invoke(MapLayerType.circleElementLayer);
 
         if (foreLayer != null && foreLayer.IsTilePresented(worldPosition))
             return MapLayerType.foreGround;
@@ -159,11 +159,11 @@ public class WorldMapService
         if (baseLayer != null && baseLayer.IsTilePresented(worldPosition))
             return MapLayerType.backGround;
 
-        if (onBoatLayer != null && onBoatLayer.IsTilePresented(worldPosition))
-            return MapLayerType.onBoatGround;
+        if (mediumLayer != null && mediumLayer.IsTilePresented(worldPosition))
+            return MapLayerType.mediumLayer;
 
-        if (boatLayer != null && boatLayer.IsTilePresented(worldPosition))
-            return MapLayerType.boatGround;
+        if (circleElementLayer != null && circleElementLayer.IsTilePresented(worldPosition))
+            return MapLayerType.circleElementLayer;
 
         return MapLayerType.backGround;
     }
@@ -187,15 +187,15 @@ public class WorldMapService
             return true;
         }
 
-        if (TryLayerContainsSubtile(MapLayerType.boatGround, tileCell, localSubtile, out layer))
+        if (TryLayerContainsSubtile(MapLayerType.mediumLayer, tileCell, localSubtile, out layer))
         {
-            layerType = MapLayerType.boatGround;
+            layerType = MapLayerType.mediumLayer;
             return true;
         }
 
-        if (TryLayerContainsSubtile(MapLayerType.onBoatGround, tileCell, localSubtile, out layer))
+        if (TryLayerContainsSubtile(MapLayerType.circleElementLayer, tileCell, localSubtile, out layer))
         {
-            layerType = MapLayerType.onBoatGround;
+            layerType = MapLayerType.circleElementLayer;
             return true;
         }
 
