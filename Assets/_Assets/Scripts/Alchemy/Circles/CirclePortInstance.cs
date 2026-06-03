@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
+public class CirclePortInstance: AlchemyArrayComponentInstance, IItemHolder, IInteractable
 {
     public CirclePortType portType;
     public ItemSlot currentItem = new ItemSlot();
@@ -110,10 +110,7 @@ public class CirclePortInstance: MonoBehaviour, IItemHolder, IInteractable
 
                 break;
             }
-            
         }
-
-
     }
 
     public int RemoveItem(ItemData itemData, int amount)

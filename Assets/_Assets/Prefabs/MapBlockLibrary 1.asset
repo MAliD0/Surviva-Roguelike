@@ -22,21 +22,29 @@ MonoBehaviour:
       Value: {fileID: 11400000, guid: fcab444e68344554a94c753ac51087e3, type: 2}
     - Key: FenceTile
       Value: {fileID: 11400000, guid: 8f57e5f607a07bd43a48194df2984fb4, type: 2}
+    - Key: FireCircleInstance
+      Value: {fileID: 11400000, guid: e9e913f9be532ea498bcd39353f3c921, type: 2}
+    - Key: Furnace
+      Value: {fileID: 11400000, guid: c7f495022fc4a0845b86aaa711b1d2a8, type: 2}
     - Key: HillTile
       Value: {fileID: 11400000, guid: b062acb2527b0f9419d73d4ad48a680b, type: 2}
     - Key: LakeTile
       Value: {fileID: 11400000, guid: 211e9e3f7b648504ab1f860c2d035be9, type: 2}
-    - Key: Table
-      Value: {fileID: 11400000, guid: 1783f1eac9308ba409c0085ec3c3c0e1, type: 2}
-    - Key: WallTile
-      Value: {fileID: 11400000, guid: 1261f2f960bda80408ae79cc40b1d5a5, type: 2}
-    - Key: Tree
-      Value: {fileID: 11400000, guid: 6951b1831ae3f974eaba6615448e65a8, type: 2}
-    - Key: WorkBench
-      Value: {fileID: 11400000, guid: 0dedb88db8ba1e64d8fe438d150ec389, type: 2}
-    - Key: Furnace
-      Value: {fileID: 11400000, guid: c7f495022fc4a0845b86aaa711b1d2a8, type: 2}
     - Key: Rock
       Value: {fileID: 11400000, guid: 8271f014247d35b42b5538f0793abfda, type: 2}
-    - Key: FireCircleInstance
-      Value: {fileID: 11400000, guid: e9e913f9be532ea498bcd39353f3c921, type: 2}
+    - Key: Table
+      Value: {fileID: 11400000, guid: 1783f1eac9308ba409c0085ec3c3c0e1, type: 2}
+    - Key: Tree
+      Value: {fileID: 11400000, guid: 6951b1831ae3f974eaba6615448e65a8, type: 2}
+    - Key: WallTile
+      Value: {fileID: 11400000, guid: 1261f2f960bda80408ae79cc40b1d5a5, type: 2}
+    - Key: WorkBenchBlock
+      Value: {fileID: 11400000, guid: 0dedb88db8ba1e64d8fe438d150ec389, type: 2}
+    - Key: ChalkTile
+      Value: {fileID: 11400000, guid: 788aa13a04886464889e0dcd59d109b1, type: 2}
+    - Key: InputPort
+      Value: {fileID: 11400000, guid: 2e4263d975ec15e4e97ab76c86164efb, type: 2}
+  resourceFolders:
+  - Tiles
+  - Alchemy/Items
+  - Alchemy/Circles/Components

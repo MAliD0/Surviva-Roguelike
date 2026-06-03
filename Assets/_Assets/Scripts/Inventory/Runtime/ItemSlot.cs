@@ -70,6 +70,7 @@ public class ItemSlot
     {
         return amount >= removeAmount;
     }
+
     public bool CanStackWith(ItemSlot other)
     {
         if (other == null)
@@ -78,15 +79,27 @@ public class ItemSlot
         if (itemData == null || other.itemData == null)
             return false;
 
-        if (itemData != other.itemData)
-            return false;
-
         if (!itemData.isStackable)
             return false;
 
-        // For now: custom alchemy stacks do not stack.
-        // This protects Residue and future custom-profile items.
-        if (alchemyData != null || other.alchemyData != null)
+        if (!other.itemData.isStackable)
+            return false;
+
+        if (itemData.GetItemID() != other.itemData.GetItemID())
+            return false;
+
+        bool thisHasCustomProfile =
+            alchemyData != null &&
+            alchemyData.hasCustomAspectProfile &&
+            alchemyData.customAspectProfile != null;
+
+        bool otherHasCustomProfile =
+            other.alchemyData != null &&
+            other.alchemyData.hasCustomAspectProfile &&
+            other.alchemyData.customAspectProfile != null;
+
+        // For now: any custom aspect profile means do not stack.
+        if (thisHasCustomProfile || otherHasCustomProfile)
             return false;
 
         return true;
@@ -96,6 +109,9 @@ public class ItemSlot
     public int AddCount(int count)
     {
         if (itemData == null || count <= 0)
+            return count;
+
+        if (!itemData.isStackable && amount > 0)
             return count;
 
         int availableSize = itemData.maxStack - amount;
