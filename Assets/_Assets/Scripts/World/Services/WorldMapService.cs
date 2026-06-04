@@ -153,17 +153,17 @@ public class WorldMapService
         MapLayerLogic mediumLayer = getLayer?.Invoke(MapLayerType.mediumLayer);
         MapLayerLogic circleElementLayer = getLayer?.Invoke(MapLayerType.circleElementLayer);
 
+        if (circleElementLayer != null && circleElementLayer.IsTilePresented(worldPosition))
+            return MapLayerType.circleElementLayer;
+
+        if (mediumLayer != null && mediumLayer.IsTilePresented(worldPosition))
+            return MapLayerType.mediumLayer;
+
         if (foreLayer != null && foreLayer.IsTilePresented(worldPosition))
             return MapLayerType.foreGround;
 
         if (baseLayer != null && baseLayer.IsTilePresented(worldPosition))
             return MapLayerType.backGround;
-
-        if (mediumLayer != null && mediumLayer.IsTilePresented(worldPosition))
-            return MapLayerType.mediumLayer;
-
-        if (circleElementLayer != null && circleElementLayer.IsTilePresented(worldPosition))
-            return MapLayerType.circleElementLayer;
 
         return MapLayerType.backGround;
     }
@@ -175,15 +175,10 @@ public class WorldMapService
         out MapLayerLogic layer
     )
     {
-        if (TryLayerContainsSubtile(MapLayerType.foreGround, tileCell, localSubtile, out layer))
-        {
-            layerType = MapLayerType.foreGround;
-            return true;
-        }
 
-        if (TryLayerContainsSubtile(MapLayerType.backGround, tileCell, localSubtile, out layer))
+        if (TryLayerContainsSubtile(MapLayerType.circleElementLayer, tileCell, localSubtile, out layer))
         {
-            layerType = MapLayerType.backGround;
+            layerType = MapLayerType.circleElementLayer;
             return true;
         }
 
@@ -193,9 +188,15 @@ public class WorldMapService
             return true;
         }
 
-        if (TryLayerContainsSubtile(MapLayerType.circleElementLayer, tileCell, localSubtile, out layer))
+        if (TryLayerContainsSubtile(MapLayerType.foreGround, tileCell, localSubtile, out layer))
         {
-            layerType = MapLayerType.circleElementLayer;
+            layerType = MapLayerType.foreGround;
+            return true;
+        }
+
+        if (TryLayerContainsSubtile(MapLayerType.backGround, tileCell, localSubtile, out layer))
+        {
+            layerType = MapLayerType.backGround;
             return true;
         }
 

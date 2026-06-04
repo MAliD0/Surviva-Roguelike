@@ -167,6 +167,12 @@ MonoBehaviour:
   itemHeld:
     itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   maxMessageLength: 40
   castRadius: 2.01
 --- !u!114 &4617047226964543108
@@ -292,18 +298,60 @@ MonoBehaviour:
   slots:
   - itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   - itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   - itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   - itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   - itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   - itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   - itemData: {fileID: 0}
     amount: 0
+    alchemyData:
+      qualityTier: 3
+      residueRatio: 0
+      hasCustomAspectProfile: 0
+      customAspectProfile:
+        aspects: []
   inventorySize: 7
   data: {fileID: 11400000, guid: b062acb2527b0f9419d73d4ad48a680b, type: 2}
   number: 1
@@ -758,7 +806,7 @@ GameObject:
   - component: {fileID: 5335017362109525167}
   - component: {fileID: 4395209099345066544}
   m_Layer: 0
-  m_Name: Circle
+  m_Name: Visuals
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -817,9 +865,9 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 283935473
-  m_SortingLayer: -3
-  m_SortingOrder: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 2
   m_Sprite: {fileID: 21300000, guid: 31da44a50cb6dc84d9be31605f7eaf0d, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0

@@ -42,16 +42,16 @@ TagManager:
   - name: Water
     uniqueID: 4042385385
     locked: 0
-  - name: BackGround
+  - name: BackgroundLayer
     uniqueID: 3251437587
     locked: 0
-  - name: ForeGround
+  - name: ForegroundLayer
     uniqueID: 283935473
     locked: 0
-  - name: OnBoatGround
+  - name: MediumLayer
     uniqueID: 499234815
     locked: 0
-  - name: BoatGround
+  - name: CircleComponentLayer
     uniqueID: 2324131409
     locked: 0
   - name: Default

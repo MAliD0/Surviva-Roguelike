@@ -44,8 +44,12 @@ public class MapObjectSpawner
         if (layer == null)
             return;
 
-        Vector2 worldPosition = layer.SubtileToWorldPosition(tileAnchor, subtileAnchor);
-
+        Vector2 worldPosition = GetObjectSpawnPosition(
+            layer,
+            tileAnchor,
+            subtileAnchor,
+            blockData
+        );
         GameObject prefab = blockLibrary
             .GetById(blockData.GetItemID())
             ?.gameObject;
@@ -138,7 +142,12 @@ public class MapObjectSpawner
         if (layer == null)
             return MapObjectSpawnResult.Fail($"Layer is missing: {layerType}");
 
-        Vector2 worldPosition = layer.SubtileToWorldPosition(tileAnchor, subtileAnchor);
+        Vector2 worldPosition = GetObjectSpawnPosition(
+            layer,
+            tileAnchor,
+            subtileAnchor,
+            blockData
+        );
 
         GameObject prefab = blockLibrary
             .GetById(blockData.GetItemID())
@@ -271,5 +280,24 @@ public class MapObjectSpawner
             return MapObjectRemovalResult.RemovedNetworkObject(layerType);
 
         return MapObjectRemovalResult.NoObject();
+    }
+    private Vector2 GetObjectSpawnPosition(
+    MapLayerLogic layer,
+    Vector2Int tileAnchor,
+    Vector2Int subtileAnchor,
+    MapBlockData blockData
+    )
+    {
+        Vector2 basePosition = layer.SubtileToWorldPosition(tileAnchor, subtileAnchor);
+
+        if (blockData == null || !blockData.gridAligned)
+            return basePosition;
+
+        Vector2 size = new Vector2(
+            Mathf.Max(1, blockData.blockSize.x),
+            Mathf.Max(1, blockData.blockSize.y)
+        );
+
+        return basePosition + size * 0.5f;
     }
 }

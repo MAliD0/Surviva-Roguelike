@@ -17,7 +17,10 @@ public class ItemDisplay : MonoBehaviour
 
         if(itemHolder == null){
             if(TryGetComponent(out IItemHolder component))
+            {
                 itemHolder = component;
+                itemHolder.OnItemChanged += OnItemChanged; 
+            }
         }
 
         worldTextDisplay = GetComponentInChildren<WorldTextDisplay>();
@@ -26,7 +29,6 @@ public class ItemDisplay : MonoBehaviour
             displayTextIfNoSprite = true;
         }
 
-        itemHolder.OnItemChanged += OnItemChanged; 
     }
 
     private void OnItemChanged(ItemSlot itemSlot)

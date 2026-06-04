@@ -42,8 +42,12 @@ MonoBehaviour:
       Value: {fileID: 11400000, guid: 0dedb88db8ba1e64d8fe438d150ec389, type: 2}
     - Key: ChalkTile
       Value: {fileID: 11400000, guid: 788aa13a04886464889e0dcd59d109b1, type: 2}
+    - Key: FireSigil
+      Value: {fileID: 11400000, guid: 5e3eff9a518c5e84585d0fca7ac54c51, type: 2}
     - Key: InputPort
       Value: {fileID: 11400000, guid: 2e4263d975ec15e4e97ab76c86164efb, type: 2}
+    - Key: OutputPort
+      Value: {fileID: 11400000, guid: e3eb2a3560f5032479b94a1e08abecfb, type: 2}
   resourceFolders:
   - Tiles
   - Alchemy/Items

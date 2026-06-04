@@ -171,8 +171,11 @@ public class GhostBuildManager : MonoBehaviour
         if (!TryGetFirstCell(cells, out Vector2Int anchorTile, out Vector2Int anchorSubtile))
             return;
 
-        Vector2 worldPosition = ghostLayerLogic.SubtileToWorldPosition(anchorTile, anchorSubtile);
-
+        Vector2 worldPosition = GetGhostObjectSpawnPosition(
+            anchorTile,
+            anchorSubtile,
+            data
+        );        
         GameObject prefab = WorldMapManager.Instance.blockLibrary
             .GetById(data.GetItemID())
             ?.gameObject;
@@ -261,7 +264,24 @@ public class GhostBuildManager : MonoBehaviour
         subtile = default;
         return false;
     }
+    private Vector2 GetGhostObjectSpawnPosition(
+        Vector2Int tileAnchor,
+        Vector2Int subtileAnchor,
+        MapBlockData blockData
+    )
+    {
+        Vector2 basePosition = ghostLayerLogic.SubtileToWorldPosition(tileAnchor, subtileAnchor);
 
+        if (blockData == null || !blockData.gridAligned)
+            return basePosition;
+
+        Vector2 size = new Vector2(
+            Mathf.Max(1, blockData.blockSize.x),
+            Mathf.Max(1, blockData.blockSize.y)
+        );
+
+        return basePosition + size * 0.5f;
+    }
     private void ResetLastPosition()
     {
         lastAnchorPoint = InvalidCell;
