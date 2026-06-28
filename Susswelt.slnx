@@ -2,6 +2,8 @@
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="AYellowpaper.SerializedCollections.csproj" />
   <Project Path="AYellowpaper.SerializedCollections.Editor.csproj" />
+  <Project Path="Tests.csproj" />
+  <Project Path="Alchemy.Runtime.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Sirenix.OdinInspector.Modules.UnityMathematics.csproj" />
 </Solution>

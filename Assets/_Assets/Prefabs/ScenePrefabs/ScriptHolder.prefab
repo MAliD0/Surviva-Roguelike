@@ -1,0 +1,344 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2913558460761398723
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1330921860690295799}
+  - component: {fileID: 3084901535905840965}
+  - component: {fileID: 7422909211046053645}
+  - component: {fileID: 3483531074672918294}
+  - component: {fileID: 3590074251902623962}
+  - component: {fileID: 6511792627687214582}
+  - component: {fileID: 9058596940970598128}
+  - component: {fileID: 8343380120783681009}
+  - component: {fileID: 895492087553321900}
+  - component: {fileID: 2242434354930660933}
+  - component: {fileID: 5919456864048523204}
+  - component: {fileID: 6267064130491479323}
+  m_Layer: 0
+  m_Name: ScriptHolder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1330921860690295799
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8227233131159454210}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3084901535905840965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 643739294
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+--- !u!114 &7422909211046053645
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ac8f46e881d1d54bb0b1ccaa38ffe44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerNumber: 5
+  joinCode: 
+--- !u!114 &3483531074672918294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dc6686411416ca4298b39e07180ef1f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SendMessageButton: {fileID: 0}
+  InputField: {fileID: 0}
+--- !u!114 &3590074251902623962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04a35ba40d274044894c7709b753e5d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainCanvas: {fileID: 0}
+  gameMenus:
+    m_Keys: []
+    m_Values: []
+  currentActiveMenu: 
+--- !u!114 &6511792627687214582
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ebf91e0addfaa73408cab7cd29e692f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blockLibrary: {fileID: 11400000, guid: ea70ddb7b10094f45b9a4611fec05960, type: 2}
+  runMode: 0
+  useBounds: 1
+  minX: -128
+  maxX: 127
+  minY: -128
+  maxY: 127
+  baseLayerGraphics: {fileID: 0}
+  foreLayerGraphics: {fileID: 0}
+  boatLayerGraphics: {fileID: 0}
+  onBoatLayerGraphics: {fileID: 0}
+  networkSync: {fileID: 9058596940970598128}
+--- !u!114 &9058596940970598128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50d324ea55a928f4ab0fb8989e54f9e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &8343380120783681009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09bab867c8aa47d408ed73be1028cbb4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  world: {fileID: 6511792627687214582}
+  blockLibrary: {fileID: 11400000, guid: ea70ddb7b10094f45b9a4611fec05960, type: 2}
+  tileChunkSize: 800
+  netlessChunkSize: 300
+  sendNetworkedBindSnapshot: 1
+--- !u!114 &895492087553321900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71e9423f7bb5ce841b6be9e975f2b4fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lootPrefab: {fileID: 5055417142331639491, guid: e838df645d34d1742a7968de305f40a6, type: 3}
+  scatterRadius: 0.45
+  randomRotation: 1
+--- !u!114 &2242434354930660933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df4491ec6337b041b5f638200060e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blockLibrary: {fileID: 11400000, guid: ea70ddb7b10094f45b9a4611fec05960, type: 2}
+  itemLibrary: {fileID: 11400000, guid: 46b8efcea69d11e40bc47797986bcc30, type: 2}
+--- !u!114 &5919456864048523204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a573574a5cda274a86088894b76d882, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ghostLayerLogic:
+    LayerTiles:
+      _serializedList: []
+    anchorHp:
+      _serializedList: []
+  ghostLayerGraphics: {fileID: 0}
+  possiblePlacementColor: {r: 0.3623484, g: 0.8584906, b: 0.26321647, a: 0.50980395}
+  impossiblePlacementColor: {r: 1, g: 0, b: 0, a: 0.5}
+  currentColor: {r: 0, g: 0, b: 0, a: 0}
+  lastAnchorPoint: {x: 0, y: 0}
+  lastSubtilePoint: {x: 0, y: 0}
+  lastFailReason: 0
+  lastFailMessage: 
+--- !u!114 &6267064130491479323
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2913558460761398723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b676e86d079be7d49bb7778c4deb13bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  offlinePlayerPrefab: {fileID: 2720719857553812312, guid: 87dcfcdb12a18ac4fae8c24f44d2297f, type: 3}
+  spawnPoint: {fileID: 1330921860690295799}
+--- !u!1 &3555969003617166623
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8227233131159454210}
+  - component: {fileID: 1189108054861749803}
+  - component: {fileID: 6027968458336315524}
+  - component: {fileID: 39008707364632138}
+  m_Layer: 0
+  m_Name: AlchemyHolder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8227233131159454210
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3555969003617166623}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1330921860690295799}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1189108054861749803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3555969003617166623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b29e8790bd1752f439cedb7b93711d20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  itemDatabase: {fileID: 6027968458336315524}
+--- !u!114 &6027968458336315524
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3555969003617166623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2da7b186e5db0b4aaf8b05680e8fda0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  allAlchemyItems: {fileID: 11400000, guid: 46b8efcea69d11e40bc47797986bcc30, type: 2}
+  residueItem: {fileID: 11400000, guid: 569a7c5190ddb2448a89f1c8240a6a6b, type: 2}
+--- !u!114 &39008707364632138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3555969003617166623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14cf1fc6143ec184cbae7d9499b1a619, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  alchemyEngine: {fileID: 1189108054861749803}
+  alchemyRequest:
+    inputItems:
+    - itemData: {fileID: 11400000, guid: 51956b3bf1d493e448ba5933ea0f21df, type: 2}
+      amount: 0
+      alchemyData:
+        qualityTier: 0
+        residueRatio: 0
+        hasCustomAspectProfile: 0
+        customAspectProfile:
+          aspects: []
+    circle: {fileID: 0}
+    processType: 1
+    availableEnergy: 10
+    knowledge: {fileID: 0}
+    intendedTarget: {fileID: 0}
+  alchemyResult:
+    success: 0
+    failureReason: 'Didn''t find suitable match for Materie (AspectDefinition) 5
+      | Wasser (AspectDefinition) 2 | Verfall (AspectDefinition) 1 | Hitze (AspectDefinition)
+      1 | '
+    outputItem: {fileID: 0}
+    qualityTier: 0
+    originalInputProfile:
+      aspects: []
+    transformedProfile:
+      aspects: []
+    residueProfile:
+      aspects:
+      - aspect: {fileID: 11400000, guid: db9abf74aec505d44819a7c90c8b0435, type: 2}
+        amount: 5
+      - aspect: {fileID: 11400000, guid: 91f120b0f222f7047a370529c48e06d6, type: 2}
+        amount: 2
+      - aspect: {fileID: 11400000, guid: 07d89bf43d5f0f740968da363f2882ee, type: 2}
+        amount: 1
+      - aspect: {fileID: 11400000, guid: d81d8a7fe9c92ff47b545e805c68031e, type: 2}
+        amount: 1
+    residueRatio: 0
+    matchQuality: 0

@@ -31,11 +31,11 @@ public class WorldMapManager : NetworkBehaviour
 
     [FoldoutGroup("Layer References")]
     [Header("Boat Layer")]
-    [SerializeField] private MapLayerGraphics boatLayerGraphics;
+    [SerializeField] private MapLayerGraphics mediumLayerGraphics;
 
     [FoldoutGroup("Layer References")]
     [Header("On Boat Layer")]
-    [SerializeField] private MapLayerGraphics onBoatLayerGraphics;
+    [SerializeField] private MapLayerGraphics circleElementsLayerGraphics;
 
     public static WorldMapManager Instance { get; private set; }
 
@@ -193,8 +193,8 @@ public class WorldMapManager : NetworkBehaviour
             CreateBounds(),
             baseLayerGraphics,
             foreLayerGraphics,
-            boatLayerGraphics,
-            onBoatLayerGraphics
+            mediumLayerGraphics,
+            circleElementsLayerGraphics
         );
     }
 
