@@ -3,163 +3,385 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static UnityEditor.PlayerSettings;
+
+public enum MapLayerResolution
+{
+    Tile,
+    Subtile
+}
 
 /// <summary>
-/// Слой данных. Поддерживает отрицательные координаты; границы опциональны.
-/// Для мульти-блоков offsets ОБЯЗАТЕЛЬНО содержат (0,0).
+/// Logical storage for one map layer.
+///
+/// Internally, all layers use:
+/// LayerTiles[tileCoordinate][localSubtileCoordinate] = MapTile.
+///
+/// Tile-only layers expose a simpler full-tile API and normalize placement
+/// to local subtile (0,0).
 /// </summary>
 [Serializable]
 public class MapLayerLogic
 {
-    //public SerializedDictionary<Vector2Int, MapTile> LayerTiles;
+    public SerializedDictionary<
+        Vector2Int,
+        SerializedDictionary<Vector2Int, MapTile>
+    > LayerTiles;
 
-    // maps anchorTile cell -> (local anchorSubtile subtileWorldPosition -> MapSubTile)
-    public SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, MapTile>> LayerTiles;
+    public SerializedDictionary<
+        Vector2Int,
+        SerializedDictionary<Vector2Int, int>
+    > anchorHp;
 
-    public SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int,int>> anchorHp;
+    public event Action<
+        Dictionary<Vector2Int, HashSet<Vector2Int>>,
+        MapBlockData
+    > onMapTilePlaced;
 
-    public event Action<Dictionary<Vector2Int, HashSet<Vector2Int>>, MapBlockData> onMapTilePlaced;
-    public event Action<Dictionary<Vector2Int, HashSet<Vector2Int>>, MapBlockType> onMapTileRemoved;
+    public event Action<
+        Dictionary<Vector2Int, HashSet<Vector2Int>>,
+        MapBlockType
+    > onMapTileRemoved;
+
     public event Action onAllTilesRemoved;
 
-    public event Action<Vector2Int /*anchor_tile*/, Vector2Int/*subtile*/, MapBlockData, int /*hp*/, int /*maxHp*/> onTileHealthChanged;
+    public event Action<
+        Vector2Int,
+        Vector2Int,
+        MapBlockData,
+        int,
+        int
+    > onTileHealthChanged;
+
+    public MapLayerResolution Resolution { get; }
+
+    public bool AllowsSubtilePlacement =>
+        Resolution == MapLayerResolution.Subtile;
 
     private readonly MapBounds _bounds;
 
-    // size of a anchorSubtile in world units
-    private float cellSize = 0.125f;
-
-    // number of subtiles per one whole anchorTile (1.0 / cellSize)
+    private const float CellSize = 0.125f;
     private const int SubtilesPerCell = 8;
 
-    // Старый конструктор (совместимость): 0..width-1, 0..height-1
-    public MapLayerLogic(int mapWidth, int mapHeight)
-        : this(new MapBounds(0, mapWidth - 1, 0, mapHeight - 1, useBounds: true)) { }
+    private static readonly Vector2Int FullTileSubtile = Vector2Int.zero;
 
-    // Новый гибкий конструктор
-    public MapLayerLogic(MapBounds bounds)
+    /// <summary>
+    /// Compatibility constructor.
+    /// Old layers continue supporting subtiles by default.
+    /// </summary>
+    public MapLayerLogic(int mapWidth, int mapHeight)
+        : this(
+            new MapBounds(
+                0,
+                mapWidth - 1,
+                0,
+                mapHeight - 1,
+                useBounds: true
+            ),
+            MapLayerResolution.Subtile
+        )
     {
-        _bounds = bounds;
-        //LayerTiles = new SerializedDictionary<Vector2Int, MapTile>();
-        
-        LayerTiles = new SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, MapTile>>();
-        anchorHp = new SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, int>>();
     }
 
-    public MapTile GetMapTile(Vector2 pos)
+    public MapLayerLogic(
+        int mapWidth,
+        int mapHeight,
+        MapLayerResolution resolution
+    )
+        : this(
+            new MapBounds(
+                0,
+                mapWidth - 1,
+                0,
+                mapHeight - 1,
+                useBounds: true
+            ),
+            resolution
+        )
     {
-        Vector2Int tile = UtillityMath.VectorToVectorInt(pos);
-        Vector2Int subtile = WorldToLocalSubtile(pos);
+    }
+
+    /// <summary>
+    /// Compatibility constructor.
+    /// Subtile placement remains enabled unless explicitly disabled.
+    /// </summary>
+    public MapLayerLogic(MapBounds bounds)
+        : this(bounds, MapLayerResolution.Subtile)
+    {
+    }
+
+    public MapLayerLogic(
+        MapBounds bounds,
+        MapLayerResolution resolution
+    )
+    {
+        _bounds = bounds;
+        Resolution = resolution;
+
+        LayerTiles = new SerializedDictionary<
+            Vector2Int,
+            SerializedDictionary<Vector2Int, MapTile>
+        >();
+
+        anchorHp = new SerializedDictionary<
+            Vector2Int,
+            SerializedDictionary<Vector2Int, int>
+        >();
+    }
+
+    #region Reading
+
+    public MapTile GetMapTile(Vector2 worldPosition)
+    {
+        Vector2Int tile = WorldToCell(worldPosition);
+        Vector2Int subtile = WorldToPlacementSubtile(worldPosition);
 
         return GetMapTile(tile, subtile);
     }
-    public MapTile GetMapTile(Vector2Int tile, Vector2Int subtile)
+
+    public MapTile GetMapTile(
+        Vector2Int tile,
+        Vector2Int subtile
+    )
     {
-        if (LayerTiles.ContainsKey(tile))
-        {
-            LayerTiles.TryGetValue(tile, out var inner);
-            if (inner != null)
-            {
-                LayerTiles[tile].TryGetValue(subtile, out MapTile value);
-                return value;
-            }
-        }
-        return null;
+        subtile = NormalizeSubtile(subtile);
+
+        if (!LayerTiles.TryGetValue(tile, out var inner))
+            return null;
+
+        if (inner == null)
+            return null;
+
+        inner.TryGetValue(subtile, out MapTile value);
+        return value;
     }
-    public bool IsTilePresented(Vector2 subtileWorldPosition){
 
-        Vector2Int tile = UtillityMath.VectorToVectorInt(subtileWorldPosition);
-        Vector2Int subTile = WorldToLocalSubtile(subtileWorldPosition);
+    public bool TryGetMapTile(
+        Vector2Int tile,
+        Vector2Int subtile,
+        out MapTile mapTile
+    )
+    {
+        mapTile = null;
+        subtile = NormalizeSubtile(subtile);
 
-        if (LayerTiles.ContainsKey(tile))
+        if (!LayerTiles.TryGetValue(tile, out var inner))
+            return false;
+
+        if (inner == null)
+            return false;
+
+        return inner.TryGetValue(subtile, out mapTile);
+    }
+
+    /// <summary>
+    /// Gets the logical block occupying an entire tile.
+    ///
+    /// This method is intended for tile-only layers.
+    /// </summary>
+    public bool TryGetFullTile(
+        Vector2Int tilePosition,
+        out MapTile mapTile
+    )
+    {
+        mapTile = null;
+
+        if (Resolution != MapLayerResolution.Tile)
+            return false;
+
+        if (!LayerTiles.TryGetValue(tilePosition, out var subtiles))
+            return false;
+
+        if (subtiles == null || subtiles.Count == 0)
+            return false;
+
+        if (subtiles.TryGetValue(FullTileSubtile, out mapTile))
+            return true;
+
+        // Defensive fallback for old serialized data.
+        foreach (MapTile value in subtiles.Values)
         {
-            LayerTiles.TryGetValue(tile, out var inner);
-            if (inner != null)
-            {
-                return LayerTiles[tile].TryGetValue(subTile, out MapTile value);
-            }
+            mapTile = value;
+            return mapTile != null;
         }
+
         return false;
     }
 
-    public bool IsTilePresented(Vector2 subtileWorldPosition, int sizeX, int sizeY)
+    /// <summary>
+    /// Returns a simple tile coordinate -> MapTile view.
+    ///
+    /// The returned dictionary is a copy. Editing it does not edit the layer.
+    /// </summary>
+    public Dictionary<Vector2Int, MapTile> GetFullTileDictionary()
     {
-        Vector2Int tile = UtillityMath.VectorToVectorInt(subtileWorldPosition);
-        Vector2Int subTile = WorldToLocalSubtile(subtileWorldPosition);
+        Dictionary<Vector2Int, MapTile> result = new();
 
-        return IsFootprintOccupied(tile, subTile, sizeX, sizeY);
+        if (Resolution != MapLayerResolution.Tile)
+        {
+            Debug.LogWarning(
+                "[MapLayerLogic] GetFullTileDictionary was called " +
+                "on a subtile layer."
+            );
+
+            return result;
+        }
+
+        foreach (var tilePair in LayerTiles)
+        {
+            if (TryGetFullTile(tilePair.Key, out MapTile mapTile))
+                result[tilePair.Key] = mapTile;
+        }
+
+        return result;
     }
 
-    // safe check for a anchorSubtile at given cell and local anchorSubtile coordinate (0..7)
-    public bool IsSubTilePresented(Vector2Int pos, Vector2Int subtilePos)
+    public IEnumerable<KeyValuePair<Vector2Int, MapTile>>
+        EnumerateFullTiles()
     {
-        if (!LayerTiles.TryGetValue(pos, out var inner))
+        if (Resolution != MapLayerResolution.Tile)
+            yield break;
+
+        foreach (Vector2Int tilePosition in LayerTiles.Keys)
+        {
+            if (TryGetFullTile(tilePosition, out MapTile mapTile))
+            {
+                yield return new KeyValuePair<Vector2Int, MapTile>(
+                    tilePosition,
+                    mapTile
+                );
+            }
+        }
+    }
+
+    public bool IsTilePresented(Vector2 worldPosition)
+    {
+        Vector2Int tile = WorldToCell(worldPosition);
+        Vector2Int subtile = WorldToPlacementSubtile(worldPosition);
+
+        return IsSubTilePresented(tile, subtile);
+    }
+
+    public bool IsTilePresented(
+        Vector2 worldPosition,
+        int sizeX,
+        int sizeY
+    )
+    {
+        Vector2Int tile = WorldToCell(worldPosition);
+        Vector2Int subtile = WorldToPlacementSubtile(worldPosition);
+
+        return IsFootprintOccupied(
+            tile,
+            subtile,
+            sizeX,
+            sizeY
+        );
+    }
+
+    public bool IsSubTilePresented(
+        Vector2Int tile,
+        Vector2Int subtile
+    )
+    {
+        subtile = NormalizeSubtile(subtile);
+
+        if (!LayerTiles.TryGetValue(tile, out var inner))
             return false;
 
-        return inner.ContainsKey(subtilePos);
+        return inner.ContainsKey(subtile);
     }
 
-    // Convert world position to integral anchorTile cell (consistent with UtillityMath.VectorToVectorInt)
-    public Vector2Int WorldToCell(Vector2 worldPos)
+    #endregion
+
+    #region Coordinate conversion
+
+    public Vector2Int WorldToCell(Vector2 worldPosition)
     {
-        return UtillityMath.VectorToVectorInt(worldPos);
+        return UtillityMath.VectorToVectorInt(worldPosition);
     }
 
-    // Convert world position to local anchorSubtile index inside its cell (0..SubtilesPerCell-1)
-    public Vector2Int WorldToLocalSubtile(Vector2 worldPos)
+    public Vector2Int WorldToLocalSubtile(Vector2 worldPosition)
     {
-        var cell = WorldToCell(worldPos);
-        float relX = worldPos.x - cell.x; // in [0,1)
-        float relY = worldPos.y - cell.y; // in [0,1)
-        int localX = Mathf.FloorToInt(relX / cellSize);
-        int localY = Mathf.FloorToInt(relY / cellSize);
-        // Clamp just in case of floating precision edge cases
+        Vector2Int cell = WorldToCell(worldPosition);
+
+        float relativeX = worldPosition.x - cell.x;
+        float relativeY = worldPosition.y - cell.y;
+
+        int localX = Mathf.FloorToInt(relativeX / CellSize);
+        int localY = Mathf.FloorToInt(relativeY / CellSize);
+
         localX = Mathf.Clamp(localX, 0, SubtilesPerCell - 1);
         localY = Mathf.Clamp(localY, 0, SubtilesPerCell - 1);
+
         return new Vector2Int(localX, localY);
     }
 
-    // returns the anchor anchorTile cell and local anchorSubtile index (the clicked anchorSubtile — used as the middle of the footprint)
-    public (Vector2Int tileCell, Vector2Int localSubtile) GetAnchorFromClick(Vector2 clickWorldPos)
+    public Vector2Int WorldToPlacementSubtile(Vector2 worldPosition)
     {
-        Vector2Int baseCell = WorldToCell(clickWorldPos);
-        Vector2Int baseLocal = WorldToLocalSubtile(clickWorldPos);
-        return (baseCell, baseLocal);
+        if (!AllowsSubtilePlacement)
+            return FullTileSubtile;
+
+        return WorldToLocalSubtile(worldPosition);
     }
 
-    // Given a clicked world position and an object size in subtiles (sizeX,sizeY),
-    // return a map: tileCell -> set of local subtiles covered by that footprint.
-    // Anchor is the clicked anchorSubtile (treated as the middle of the footprint).
-    public Dictionary<Vector2Int, HashSet<Vector2Int>> GetFootprintCellLocalPairs(Vector2Int tile, Vector2Int subtile,int sizeX, int sizeY, bool anchorIsTopLeft = false)
+    public (
+        Vector2Int tileCell,
+        Vector2Int localSubtile
+    ) GetAnchorFromClick(Vector2 worldPosition)
     {
-        var result = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
+        return (
+            WorldToCell(worldPosition),
+            WorldToPlacementSubtile(worldPosition)
+        );
+    }
 
-        // base cell and local index where user clicked
+    private Vector2Int NormalizeSubtile(Vector2Int subtile)
+    {
+        if (!AllowsSubtilePlacement)
+            return FullTileSubtile;
+
+        return subtile;
+    }
+
+    #endregion
+
+    #region Footprints
+
+    public Dictionary<Vector2Int, HashSet<Vector2Int>>
+        GetFootprintCellLocalPairs(
+            Vector2Int tile,
+            Vector2Int subtile,
+            int sizeX,
+            int sizeY,
+            bool anchorIsTopLeft = false
+        )
+    {
+        Dictionary<Vector2Int, HashSet<Vector2Int>> result = new();
+
+        if (!AllowsSubtilePlacement)
+        {
+            result[tile] = CreateFullTileSubtileSet();
+            return result;
+        }
+
         Vector2Int baseCell = tile;
         Vector2Int baseLocal = subtile;
 
-        result.Add(baseCell, new HashSet<Vector2Int>());
-
-        //adding center anchorSubtile as anchor
-        result[baseCell].Add(baseLocal);
-
-        // compute starting local indices depending on anchoring mode
         int startLocalX;
         int startLocalY;
 
         if (anchorIsTopLeft)
         {
-            // clicked anchorSubtile is the top-left corner of footprint
             startLocalX = baseLocal.x;
             startLocalY = baseLocal.y;
         }
         else
         {
-            // clicked anchorSubtile is the middle of the footprint:
-            // shift start so the footprint is centered on the clicked anchorSubtile.
-            startLocalX = baseLocal.x - Mathf.FloorToInt(sizeX / 2f);
-            startLocalY = baseLocal.y - Mathf.FloorToInt(sizeY / 2f);
+            startLocalX =
+                baseLocal.x - Mathf.FloorToInt(sizeX / 2f);
+
+            startLocalY =
+                baseLocal.y - Mathf.FloorToInt(sizeY / 2f);
         }
 
         for (int dx = 0; dx < sizeX; dx++)
@@ -169,37 +391,66 @@ public class MapLayerLogic
                 int globalLocalX = startLocalX + dx;
                 int globalLocalY = startLocalY + dy;
 
-                // compute which anchorTile cell offset this global local lands in
-                int cellOffsetX = Mathf.FloorToInt(globalLocalX / (float)SubtilesPerCell);
-                int cellOffsetY = Mathf.FloorToInt(globalLocalY / (float)SubtilesPerCell);
+                int cellOffsetX = Mathf.FloorToInt(
+                    globalLocalX / (float)SubtilesPerCell
+                );
 
-                int localX = globalLocalX - cellOffsetX * SubtilesPerCell;
-                int localY = globalLocalY - cellOffsetY * SubtilesPerCell;
+                int cellOffsetY = Mathf.FloorToInt(
+                    globalLocalY / (float)SubtilesPerCell
+                );
 
-                // normalize local coordinates (should be 0..7)
-                localX = Mathf.Clamp(localX, 0, SubtilesPerCell - 1);
-                localY = Mathf.Clamp(localY, 0, SubtilesPerCell - 1);
+                int localX =
+                    globalLocalX -
+                    cellOffsetX * SubtilesPerCell;
 
-                var tileCell = new Vector2Int(baseCell.x + cellOffsetX, baseCell.y + cellOffsetY);
-                var localPos = new Vector2Int(localX, localY);
+                int localY =
+                    globalLocalY -
+                    cellOffsetY * SubtilesPerCell;
 
-                if (!result.ContainsKey(tileCell))
-                    result.Add(tileCell, new HashSet<Vector2Int>());
+                Vector2Int tileCell = new(
+                    baseCell.x + cellOffsetX,
+                    baseCell.y + cellOffsetY
+                );
 
-                result[tileCell].Add(localPos);
+                Vector2Int localPosition = new(
+                    localX,
+                    localY
+                );
+
+                if (!result.TryGetValue(tileCell, out var localSet))
+                {
+                    localSet = new HashSet<Vector2Int>();
+                    result.Add(tileCell, localSet);
+                }
+
+                localSet.Add(localPosition);
             }
         }
 
         return result;
     }
-    public Dictionary<Vector2Int, HashSet<Vector2Int>> GetFootprintCellLocalPairs(Vector2 clickWorldPos, int sizeX, int sizeY, bool anchorIsTopLeft = false)
-    {
-        Vector2Int baseCell = WorldToCell(clickWorldPos);
-        Vector2Int baseLocal = WorldToLocalSubtile(clickWorldPos);
 
-        return GetFootprintCellLocalPairs(baseCell, baseLocal, sizeX, sizeY, anchorIsTopLeft);
+    public Dictionary<Vector2Int, HashSet<Vector2Int>>
+        GetFootprintCellLocalPairs(
+            Vector2 worldPosition,
+            int sizeX,
+            int sizeY,
+            bool anchorIsTopLeft = false
+        )
+    {
+        Vector2Int baseCell = WorldToCell(worldPosition);
+        Vector2Int baseLocal =
+            WorldToPlacementSubtile(worldPosition);
+
+        return GetFootprintCellLocalPairs(
+            baseCell,
+            baseLocal,
+            sizeX,
+            sizeY,
+            anchorIsTopLeft
+        );
     }
-    
+
     public bool IsFootprintFullyOccupied(
         Dictionary<Vector2Int, HashSet<Vector2Int>> pairs,
         int sizeX,
@@ -207,19 +458,18 @@ public class MapLayerLogic
         bool anchorIsTopLeft = false
     )
     {
-        foreach (Vector2Int tileCell in pairs.Keys)
+        foreach (var tilePair in pairs)
         {
-            foreach (Vector2Int localPos in pairs[tileCell])
-            {
-                if (!_bounds.Contains(tileCell))
-                {
-                    Debug.LogWarning($"[Place] {tileCell} out of bounds");
-                    return false;
-                }
+            if (!_bounds.Contains(tilePair.Key))
+                return false;
 
-                if (!IsSubTilePresented(tileCell, localPos))
+            foreach (Vector2Int localPosition in tilePair.Value)
+            {
+                if (!IsSubTilePresented(
+                        tilePair.Key,
+                        localPosition
+                    ))
                 {
-                    Debug.LogWarning($"[Place] subtile {localPos} in cell {tileCell} is missing");
                     return false;
                 }
             }
@@ -227,6 +477,7 @@ public class MapLayerLogic
 
         return true;
     }
+
     public bool IsFootprintOccupied(
         Dictionary<Vector2Int, HashSet<Vector2Int>> pairs,
         int sizeX,
@@ -234,19 +485,18 @@ public class MapLayerLogic
         bool anchorIsTopLeft = false
     )
     {
-        foreach (Vector2Int tileCell in pairs.Keys)
+        foreach (var tilePair in pairs)
         {
-            foreach (Vector2Int localPos in pairs[tileCell])
-            {
-                if (!_bounds.Contains(tileCell))
-                {
-                    Debug.LogWarning($"[Place] {tileCell} out of bounds");
-                    return true;
-                }
+            if (!_bounds.Contains(tilePair.Key))
+                return true;
 
-                if (IsSubTilePresented(tileCell, localPos))
+            foreach (Vector2Int localPosition in tilePair.Value)
+            {
+                if (IsSubTilePresented(
+                        tilePair.Key,
+                        localPosition
+                    ))
                 {
-                    Debug.LogWarning($"[Place] subtile {localPos} in cell {tileCell} occupied");
                     return true;
                 }
             }
@@ -254,53 +504,129 @@ public class MapLayerLogic
 
         return false;
     }
-   
-    public bool IsFootprintFullyOccupied(Vector2 clickWorldPos, int sizeX, int sizeY, bool anchorIsTopLeft = false)
+
+    public bool IsFootprintFullyOccupied(
+        Vector2 worldPosition,
+        int sizeX,
+        int sizeY,
+        bool anchorIsTopLeft = false
+    )
     {
-        Dictionary<Vector2Int, HashSet<Vector2Int>> pairs = GetFootprintCellLocalPairs(clickWorldPos, sizeX, sizeY, anchorIsTopLeft);
-        return IsFootprintFullyOccupied(pairs, sizeX, sizeY, anchorIsTopLeft);
-    }
-   
-    public bool IsFootprintOccupied(Vector2Int tile, Vector2Int subtile ,int sizeX, int sizeY, bool anchorIsTopLeft = false)
-    {
-        Dictionary<Vector2Int, HashSet<Vector2Int>> pairs = GetFootprintCellLocalPairs(tile,subtile, sizeX, sizeY, anchorIsTopLeft);
-        
-        return IsFootprintOccupied(pairs, sizeX, sizeY, anchorIsTopLeft);
-    }
-    public bool IsFootprintOccupied(Vector2 clickWorldPos, int sizeX, int sizeY, bool anchorIsTopLeft = false)
-    {
-        Dictionary<Vector2Int, HashSet<Vector2Int>> pairs = GetFootprintCellLocalPairs(clickWorldPos, sizeX, sizeY, anchorIsTopLeft);
-        return IsFootprintOccupied(pairs, sizeX, sizeY, anchorIsTopLeft);
+        var pairs = GetFootprintCellLocalPairs(
+            worldPosition,
+            sizeX,
+            sizeY,
+            anchorIsTopLeft
+        );
+
+        return IsFootprintFullyOccupied(
+            pairs,
+            sizeX,
+            sizeY,
+            anchorIsTopLeft
+        );
     }
 
-    // Replace CanBePlaced(Vector2 pos, MapBlockData data)
-    public bool CanBePlaced(Vector2 pos, MapBlockData data)
+    public bool IsFootprintOccupied(
+        Vector2Int tile,
+        Vector2Int subtile,
+        int sizeX,
+        int sizeY,
+        bool anchorIsTopLeft = false
+    )
     {
-        return CanBePlaced(WorldToCell(pos), WorldToLocalSubtile(pos), data);
+        var pairs = GetFootprintCellLocalPairs(
+            tile,
+            subtile,
+            sizeX,
+            sizeY,
+            anchorIsTopLeft
+        );
+
+        return IsFootprintOccupied(
+            pairs,
+            sizeX,
+            sizeY,
+            anchorIsTopLeft
+        );
     }
 
-    public bool CanBePlaced(Vector2Int tile, Vector2Int subtile, MapBlockData data)
+    public bool IsFootprintOccupied(
+        Vector2 worldPosition,
+        int sizeX,
+        int sizeY,
+        bool anchorIsTopLeft = false
+    )
+    {
+        var pairs = GetFootprintCellLocalPairs(
+            worldPosition,
+            sizeX,
+            sizeY,
+            anchorIsTopLeft
+        );
+
+        return IsFootprintOccupied(
+            pairs,
+            sizeX,
+            sizeY,
+            anchorIsTopLeft
+        );
+    }
+
+    #endregion
+
+    #region Placement
+
+    public bool CanBePlaced(
+        Vector2 worldPosition,
+        MapBlockData data
+    )
+    {
+        return CanBePlaced(
+            WorldToCell(worldPosition),
+            WorldToPlacementSubtile(worldPosition),
+            data
+        );
+    }
+
+    public bool CanBePlaced(
+        Vector2Int tile,
+        Vector2Int subtile,
+        MapBlockData data
+    )
     {
         if (data == null)
             return false;
 
         if (!_bounds.Contains(tile))
-        {
-            Debug.LogWarning($"[Place] {tile} outside bounds");
             return false;
+
+        subtile = NormalizeSubtile(subtile);
+
+        if (!AllowsSubtilePlacement)
+        {
+            if (data.mapBlockType == MapBlockType.GameObject &&
+                !data.gridAligned)
+            {
+                Debug.LogWarning(
+                    $"[MapLayerLogic] {data.GetItemID()} cannot be " +
+                    "placed on a tile-only layer because it is not " +
+                    "grid aligned."
+                );
+
+                return false;
+            }
+
+            return !LayerTiles.ContainsKey(tile);
         }
 
         if (data.mapBlockType == MapBlockType.Tile)
-        {
             return !LayerTiles.ContainsKey(tile);
-        }
 
         if (data.mapBlockType == MapBlockType.GameObject)
         {
             if (data.gridAligned)
-            {
                 return !LayerTiles.ContainsKey(tile);
-            }
 
             return !IsFootprintOccupied(
                 tile,
@@ -314,277 +640,470 @@ public class MapLayerLogic
         return false;
     }
 
-    // Replace PlaceBlock(Vector2Int tileIndex, Vector2Int subtileIndex, MapBlockData data)
-    public bool PlaceBlock(Vector2Int tileIndex, Vector2Int subtileIndex, MapBlockData data)
+    public bool PlaceBlock(
+        Vector2Int tileIndex,
+        Vector2Int subtileIndex,
+        MapBlockData data
+    )
     {
-        if (!CanBePlaced(tileIndex, subtileIndex, data)) return false;
+        subtileIndex = NormalizeSubtile(subtileIndex);
 
-        Vector2Int anchor = tileIndex;
-        Vector2Int subTile = subtileIndex;
+        if (!CanBePlaced(tileIndex, subtileIndex, data))
+            return false;
 
-        Dictionary<Vector2Int, HashSet<Vector2Int>> group = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
+        Vector2Int anchorTile = tileIndex;
+        Vector2Int anchorSubtile = subtileIndex;
 
-        switch (data.mapBlockType)
+        Dictionary<Vector2Int, HashSet<Vector2Int>> group;
+
+        bool occupiesWholeTile =
+            !AllowsSubtilePlacement ||
+            data.mapBlockType == MapBlockType.Tile ||
+            (
+                data.mapBlockType == MapBlockType.GameObject &&
+                data.gridAligned
+            );
+
+        if (occupiesWholeTile)
         {
-            case MapBlockType.Tile:
-                // tile-type: behave like whole-tile placement centered at tileIndex
-                subTile = new Vector2Int(0, 0); //for tile subtileAnchor is always 0,0
+            anchorSubtile = FullTileSubtile;
 
-                List<Vector2Int> cells = new List<Vector2Int> { tileIndex };
-
-                foreach (var cell in cells)
-                {
-                    if (!LayerTiles.ContainsKey(cell)) LayerTiles.Add(cell, new SerializedDictionary<Vector2Int, MapTile>());
-
-                    var set = new HashSet<Vector2Int>();
-                    for (int lx = 0; lx < SubtilesPerCell; lx++)
-                    for (int ly = 0; ly < SubtilesPerCell; ly++)
-                    {
-                        var local = new Vector2Int(lx, ly);
-                        if (LayerTiles[cell].ContainsKey(local)) continue;
-                        LayerTiles[cell].Add(local, new MapTile(local, data, cell, subTile, anchor));//for tile subtileAnchor is always 0,0
-                            set.Add(local);
-                    }
-                    group[cell] = set;
-
-                }
-                if (data.breakable)
-                    onTileHealthChanged?.Invoke(tileIndex, subtileIndex, data, GetHealth(tileIndex, group[tileIndex].First()), data.maxHealth);
-            break;
-            case MapBlockType.GameObject:// subtile/multisubtile placement (non-tile)
-                
-                if (data.gridAligned)
-                {
-                    subTile = new Vector2Int(0, 0); //for tile subtileAnchor is always 0,0
-
-                    cells = new List<Vector2Int> { tileIndex };
-                    group = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
-
-                    foreach (var cell in cells)
-                    {
-                        if (!LayerTiles.ContainsKey(cell)) LayerTiles.Add(cell, new SerializedDictionary<Vector2Int, MapTile>());
-
-                        var set = new HashSet<Vector2Int>();
-                        for (int lx = 0; lx < SubtilesPerCell; lx++)
-                        for (int ly = 0; ly < SubtilesPerCell; ly++)
-                        {
-                            var local = new Vector2Int(lx, ly);
-                            if (LayerTiles[cell].ContainsKey(local)) continue;
-                            LayerTiles[cell].Add(local, new MapTile(local, data, cell, subTile, anchor));//for tile subtileAnchor is always 0,0
-                                set.Add(local);
-                        }
-                        group[cell] = set;
-
-                    }
-                    if (data.breakable)
-                        onTileHealthChanged?.Invoke(tileIndex, subtileIndex, data, GetHealth(tileIndex, group[tileIndex].First()), data.maxHealth);
-
-                }
-                else
-                {
-                    group = GetFootprintCellLocalPairs(tileIndex, subtileIndex, data.blockSize.x, data.blockSize.y, anchorIsTopLeft: false);
-
-                    foreach (Vector2Int tile in group.Keys)
-                    {
-                        if (!LayerTiles.ContainsKey(tile)) LayerTiles.Add(tile, new SerializedDictionary<Vector2Int, MapTile>());
-
-                        foreach (Vector2Int tileCell in group[tile])
-                        {
-                            if (LayerTiles[tile].ContainsKey(tileCell)) continue;
-                            LayerTiles[tile].Add(tileCell, new MapTile(tileCell, data, tile, subtileIndex, anchor));
-                        }
-                    }
-                }
-
-            break;
+            group = PlaceWholeTile(
+                tileIndex,
+                data,
+                anchorTile,
+                anchorSubtile
+            );
+        }
+        else
+        {
+            group = PlaceSubtileFootprint(
+                tileIndex,
+                subtileIndex,
+                data,
+                anchorTile,
+                anchorSubtile
+            );
         }
 
         if (data.breakable)
         {
-            SetHealth(anchor, subTile, data, Mathf.Max(1, data.maxHealth), fireEvent: true);
-            //onTileHealthChanged?.Invoke(anchor, subTile, data, GetHealth(anchor, subTile), data.maxHealth);
+            SetHealth(
+                anchorTile,
+                anchorSubtile,
+                data,
+                Mathf.Max(1, data.maxHealth),
+                fireEvent: true
+            );
         }
 
         onMapTilePlaced?.Invoke(group, data);
         return true;
     }
 
-    // Replace PlaceBlock(Vector2 pos, MapBlockData data)
-    public bool PlaceBlock(Vector2 pos, MapBlockData data)
+    public bool PlaceBlock(
+        Vector2 worldPosition,
+        MapBlockData data
+    )
     {
-        var tile = UtillityMath.VectorToVectorInt(pos);
-        var localSub = WorldToLocalSubtile(pos);
-        return PlaceBlock(tile, localSub, data);
+        return PlaceBlock(
+            WorldToCell(worldPosition),
+            WorldToPlacementSubtile(worldPosition),
+            data
+        );
     }
 
-    public void RemoveTile(Vector2Int clickedTile, Vector2Int clickedSubtile)
+    private Dictionary<Vector2Int, HashSet<Vector2Int>>
+        PlaceWholeTile(
+            Vector2Int tile,
+            MapBlockData data,
+            Vector2Int anchorTile,
+            Vector2Int anchorSubtile
+        )
     {
-        if (!LayerTiles.TryGetValue(clickedTile, out var subtiles))
-            return;
+        EnsureTileStorage(tile);
 
-        if (!subtiles.TryGetValue(clickedSubtile, out MapTile clickedMapTile))
-            return;
+        HashSet<Vector2Int> occupiedSubtiles =
+            CreateFullTileSubtileSet();
 
-        var data = clickedMapTile.BlockData;
-
-        Vector2Int anchorTile = clickedMapTile.TileAnchor;
-        Vector2Int anchorSubtile = clickedMapTile.SubtileAnchor;
-
-        Dictionary<Vector2Int, HashSet<Vector2Int>> occupiedTiles = new Dictionary<Vector2Int, HashSet<Vector2Int>>();
-
-        switch (data.mapBlockType)
+        foreach (Vector2Int localSubtile in occupiedSubtiles)
         {
-            case MapBlockType.Tile:
-                if (!LayerTiles.TryGetValue(anchorTile, out var tileSubtiles))
-                    return;
-
-                occupiedTiles.Add(anchorTile, tileSubtiles.Keys.ToHashSet());
-
-                foreach (var local in tileSubtiles.Keys.ToList())
-                    tileSubtiles.Remove(local);
-
-                LayerTiles.Remove(anchorTile);
-                break;
-
-            default:
-                if (data.gridAligned)
-                {
-                    if (!LayerTiles.TryGetValue(anchorTile, out var gridSubtiles))
-                        return;
-
-                    occupiedTiles.Add(anchorTile, gridSubtiles.Keys.ToHashSet());
-
-                    foreach (var local in gridSubtiles.Keys.ToList())
-                        gridSubtiles.Remove(local);
-
-                    LayerTiles.Remove(anchorTile);
-                }
-                else
-                {
-                    occupiedTiles = GetFootprintCellLocalPairs(
-                        anchorTile,
-                        anchorSubtile,
-                        data.blockSize.x,
-                        data.blockSize.y
-                    );
-
-                    foreach (Vector2Int tile in occupiedTiles.Keys.ToList())
-                    {
-                        foreach (Vector2Int subtile in occupiedTiles[tile])
-                        {
-                            if (LayerTiles.ContainsKey(tile) && LayerTiles[tile].ContainsKey(subtile))
-                                LayerTiles[tile].Remove(subtile);
-                        }
-
-                        if (LayerTiles.ContainsKey(tile) && LayerTiles[tile].Count == 0)
-                            LayerTiles.Remove(tile);
-                    }
-                }
-                break;
+            LayerTiles[tile][localSubtile] = new MapTile(
+                localSubtile,
+                data,
+                tile,
+                anchorSubtile,
+                anchorTile
+            );
         }
 
-        onMapTileRemoved?.Invoke(occupiedTiles, data.mapBlockType);
-    }
-    public void RemoveAllTiles()
-    {
-        LayerTiles = new SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, MapTile>>();
-        anchorHp = new SerializedDictionary<Vector2Int, SerializedDictionary<Vector2Int, int>>();
-        
-        onAllTilesRemoved?.Invoke();
-    }
-
-    public int GetHealth(Vector2Int anchor, Vector2Int subTile)
-    {
-        if(anchorHp.TryGetValue(anchor, out SerializedDictionary<Vector2Int, int> val))
+        return new Dictionary<
+            Vector2Int,
+            HashSet<Vector2Int>
+        >
         {
-            anchorHp[anchor].TryGetValue(subTile, out int hp);
-            return hp;
-        }
-
-        return -1;
+            [tile] = occupiedSubtiles
+        };
     }
 
-    public void SetHealth(Vector2Int anchor, Vector2Int subtile, MapBlockData data, int hp, bool fireEvent = true)
+    private Dictionary<Vector2Int, HashSet<Vector2Int>>
+        PlaceSubtileFootprint(
+            Vector2Int tile,
+            Vector2Int subtile,
+            MapBlockData data,
+            Vector2Int anchorTile,
+            Vector2Int anchorSubtile
+        )
     {
-        if (data == null || !data.breakable) return;
+        var group = GetFootprintCellLocalPairs(
+            tile,
+            subtile,
+            data.blockSize.x,
+            data.blockSize.y,
+            anchorIsTopLeft: false
+        );
 
-        hp = Mathf.Clamp(hp, 0, Mathf.Max(1, data.maxHealth));
-
-        if (anchorHp.ContainsKey(anchor))
+        foreach (var tilePair in group)
         {
-            if (anchorHp[anchor].ContainsKey(subtile))
-                anchorHp[anchor][subtile] = hp;
-            else
+            EnsureTileStorage(tilePair.Key);
+
+            foreach (Vector2Int localSubtile in tilePair.Value)
             {
-                anchorHp[anchor].Add(subtile, hp);
+                LayerTiles[tilePair.Key][localSubtile] =
+                    new MapTile(
+                        localSubtile,
+                        data,
+                        tilePair.Key,
+                        anchorSubtile,
+                        anchorTile
+                    );
             }
+        }
+
+        return group;
+    }
+
+    #endregion
+
+    #region Removal
+
+    public void RemoveTile(
+        Vector2Int clickedTile,
+        Vector2Int clickedSubtile
+    )
+    {
+        clickedSubtile = NormalizeSubtile(clickedSubtile);
+
+        if (!LayerTiles.TryGetValue(
+                clickedTile,
+                out var subtiles
+            ))
+        {
+            return;
+        }
+
+        if (!subtiles.TryGetValue(
+                clickedSubtile,
+                out MapTile clickedMapTile
+            ))
+        {
+            return;
+        }
+
+        MapBlockData data = clickedMapTile.BlockData;
+
+        Vector2Int anchorTile =
+            clickedMapTile.TileAnchor;
+
+        Vector2Int anchorSubtile =
+            clickedMapTile.SubtileAnchor;
+
+        Dictionary<Vector2Int, HashSet<Vector2Int>>
+            occupiedTiles;
+
+        bool occupiesWholeTile =
+            !AllowsSubtilePlacement ||
+            data.mapBlockType == MapBlockType.Tile ||
+            data.gridAligned;
+
+        if (occupiesWholeTile)
+        {
+            if (!LayerTiles.TryGetValue(
+                    anchorTile,
+                    out var tileSubtiles
+                ))
+            {
+                return;
+            }
+
+            occupiedTiles = new Dictionary<
+                Vector2Int,
+                HashSet<Vector2Int>
+            >
+            {
+                [anchorTile] =
+                    tileSubtiles.Keys.ToHashSet()
+            };
+
+            LayerTiles.Remove(anchorTile);
         }
         else
         {
-            anchorHp.Add(anchor, new SerializedDictionary<Vector2Int, int>());
-            anchorHp[anchor].Add(subtile, hp);
+            occupiedTiles = GetFootprintCellLocalPairs(
+                anchorTile,
+                anchorSubtile,
+                data.blockSize.x,
+                data.blockSize.y
+            );
+
+            foreach (var tilePair in occupiedTiles)
+            {
+                if (!LayerTiles.TryGetValue(
+                        tilePair.Key,
+                        out var storedSubtiles
+                    ))
+                {
+                    continue;
+                }
+
+                foreach (Vector2Int localSubtile in tilePair.Value)
+                    storedSubtiles.Remove(localSubtile);
+
+                if (storedSubtiles.Count == 0)
+                    LayerTiles.Remove(tilePair.Key);
+            }
         }
 
-        if (anchorHp[anchor][subtile] <= 0)
-        {
-            anchorHp[anchor].Remove(subtile);
+        RemoveHealth(anchorTile, anchorSubtile);
 
-            if (anchorHp[anchor].Count == 0)
+        onMapTileRemoved?.Invoke(
+            occupiedTiles,
+            data.mapBlockType
+        );
+    }
+
+    public void RemoveAllTiles()
+    {
+        LayerTiles = new SerializedDictionary<
+            Vector2Int,
+            SerializedDictionary<Vector2Int, MapTile>
+        >();
+
+        anchorHp = new SerializedDictionary<
+            Vector2Int,
+            SerializedDictionary<Vector2Int, int>
+        >();
+
+        onAllTilesRemoved?.Invoke();
+    }
+
+    #endregion
+
+    #region Health
+
+    public int GetHealth(
+        Vector2Int anchor,
+        Vector2Int subtile
+    )
+    {
+        subtile = NormalizeSubtile(subtile);
+
+        if (!anchorHp.TryGetValue(anchor, out var healthBySubtile))
+            return -1;
+
+        if (!healthBySubtile.TryGetValue(subtile, out int hp))
+            return -1;
+
+        return hp;
+    }
+
+    public void SetHealth(
+        Vector2Int anchor,
+        Vector2Int subtile,
+        MapBlockData data,
+        int hp,
+        bool fireEvent = true
+    )
+    {
+        if (data == null || !data.breakable)
+            return;
+
+        subtile = NormalizeSubtile(subtile);
+
+        int maximumHealth = Mathf.Max(1, data.maxHealth);
+        hp = Mathf.Clamp(hp, 0, maximumHealth);
+
+        if (!anchorHp.TryGetValue(
+                anchor,
+                out var healthBySubtile
+            ))
+        {
+            healthBySubtile =
+                new SerializedDictionary<Vector2Int, int>();
+
+            anchorHp.Add(anchor, healthBySubtile);
+        }
+
+        if (hp <= 0)
+        {
+            healthBySubtile.Remove(subtile);
+
+            if (healthBySubtile.Count == 0)
                 anchorHp.Remove(anchor);
+        }
+        else
+        {
+            healthBySubtile[subtile] = hp;
         }
 
         if (fireEvent)
-            onTileHealthChanged?.Invoke(anchor, subtile, data, hp, data.maxHealth);
+        {
+            onTileHealthChanged?.Invoke(
+                anchor,
+                subtile,
+                data,
+                hp,
+                maximumHealth
+            );
+        }
     }
 
-    public bool Damage(Vector2Int anchor, Vector2Int subtile,MapBlockData data, int amount)
+    public bool Damage(
+        Vector2Int anchor,
+        Vector2Int subtile,
+        MapBlockData data,
+        int amount
+    )
     {
-        if (data == null || !data.breakable) return false;
-        int maxHp = Mathf.Max(1, data.maxHealth);
-        int cur = GetHealth(anchor, subtile);
-        if (cur < 0) cur = maxHp;
+        if (data == null || !data.breakable)
+            return false;
 
-        int next = Mathf.Clamp(cur - Mathf.Max(1, amount), 0, maxHp);
-        
-        anchorHp[anchor].Remove(subtile);
-        anchorHp[anchor].Add(subtile, next);
+        subtile = NormalizeSubtile(subtile);
 
-        if(anchorHp[anchor][subtile] <= 0)
+        int maximumHealth = Mathf.Max(1, data.maxHealth);
+        int currentHealth = GetHealth(anchor, subtile);
+
+        if (currentHealth < 0)
+            currentHealth = maximumHealth;
+
+        int nextHealth = Mathf.Clamp(
+            currentHealth - Mathf.Max(1, amount),
+            0,
+            maximumHealth
+        );
+
+        SetHealth(
+            anchor,
+            subtile,
+            data,
+            nextHealth,
+            fireEvent: true
+        );
+
+        return nextHealth <= 0;
+    }
+
+    private void RemoveHealth(
+        Vector2Int anchor,
+        Vector2Int subtile
+    )
+    {
+        subtile = NormalizeSubtile(subtile);
+
+        if (!anchorHp.TryGetValue(anchor, out var healthBySubtile))
+            return;
+
+        healthBySubtile.Remove(subtile);
+
+        if (healthBySubtile.Count == 0)
+            anchorHp.Remove(anchor);
+    }
+
+    #endregion
+
+    #region World positions
+
+    public Vector2 SubtileToWorldPosition(
+        Vector2Int tileCell,
+        Vector2Int localSubtile,
+        bool center = true
+    )
+    {
+        if (!AllowsSubtilePlacement)
         {
-            anchorHp[anchor].Remove(subtile);
-            if (anchorHp[anchor].Count == 0)
-                anchorHp.Remove(anchor);
+            return new Vector2(
+                tileCell.x + (center ? 0.5f : 0f),
+                tileCell.y + (center ? 0.5f : 0f)
+            );
         }
 
-        onTileHealthChanged?.Invoke(anchor, subtile, data, next, maxHp);
-        return next <= 0;
-    }
+        int cellOffsetX = Mathf.FloorToInt(
+            localSubtile.x / (float)SubtilesPerCell
+        );
 
-    // Returns world position for given anchorTile cell + local anchorSubtile index.
-    // - tileCell: integer anchorTile coordinates (same as keys in LayerTiles).
-    // - localSubtile: local anchorSubtile coords inside cell (0..SubtilesPerCell-1).
-    // - center: if true returns center of the anchorSubtile, otherwise bottom-left corner.
-    //
-    // The method handles local indices outside [0..SubtilesPerCell-1] by moving to adjacent cells.
-    public Vector2 SubtileToWorldPosition(Vector2Int tileCell, Vector2Int localSubtile, bool center = true)
-    {
-        // handle local indices that may overflow/underflow the cell by moving to adjacent tiles
-        int cellOffsetX = Mathf.FloorToInt(localSubtile.x / (float)SubtilesPerCell);
-        int cellOffsetY = Mathf.FloorToInt(localSubtile.y / (float)SubtilesPerCell);
+        int cellOffsetY = Mathf.FloorToInt(
+            localSubtile.y / (float)SubtilesPerCell
+        );
 
-        int localX = localSubtile.x - cellOffsetX * SubtilesPerCell;
-        int localY = localSubtile.y - cellOffsetY * SubtilesPerCell;
+        int localX =
+            localSubtile.x -
+            cellOffsetX * SubtilesPerCell;
 
-        // clamp to valid local range (defensive)
-        localX = Mathf.Clamp(localX, 0, SubtilesPerCell - 1);
-        localY = Mathf.Clamp(localY, 0, SubtilesPerCell - 1);
+        int localY =
+            localSubtile.y -
+            cellOffsetY * SubtilesPerCell;
 
-        // compute resulting anchorTile cell (may be different when localSubtile was outside range)
-        var resultCell = new Vector2Int(tileCell.x + cellOffsetX, tileCell.y + cellOffsetY);
+        Vector2Int resultCell = new(
+            tileCell.x + cellOffsetX,
+            tileCell.y + cellOffsetY
+        );
 
-        float x = resultCell.x + localX * cellSize + (center ? cellSize * 0.5f : 0f);
-        float y = resultCell.y + localY * cellSize + (center ? cellSize * 0.5f : 0f);
+        float centerOffset = center
+            ? CellSize * 0.5f
+            : 0f;
+
+        float x =
+            resultCell.x +
+            localX * CellSize +
+            centerOffset;
+
+        float y =
+            resultCell.y +
+            localY * CellSize +
+            centerOffset;
 
         return new Vector2(x, y);
     }
+
+    #endregion
+
+    #region Internal helpers
+
+    private void EnsureTileStorage(Vector2Int tile)
+    {
+        if (LayerTiles.ContainsKey(tile))
+            return;
+
+        LayerTiles.Add(
+            tile,
+            new SerializedDictionary<Vector2Int, MapTile>()
+        );
+    }
+
+    private static HashSet<Vector2Int>
+        CreateFullTileSubtileSet()
+    {
+        HashSet<Vector2Int> result = new();
+
+        for (int x = 0; x < SubtilesPerCell; x++)
+        {
+            for (int y = 0; y < SubtilesPerCell; y++)
+                result.Add(new Vector2Int(x, y));
+        }
+
+        return result;
+    }
+
+    #endregion
 }
+

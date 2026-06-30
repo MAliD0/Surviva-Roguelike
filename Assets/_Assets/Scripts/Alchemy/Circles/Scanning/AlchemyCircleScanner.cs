@@ -1,143 +1,171 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System.Text;
-using System.Linq;
-using UnityEngine.SocialPlatforms;
+using UnityEngine.Tilemaps;
 
 public class AlchemyCircleScanner
 {
-    public string GetLayerInfo(List<Vector2Int> positions)
+    private static readonly Vector2Int[] Directions =
     {
-        int[,] grid = new int[16,16];
+        Vector2Int.up,
+        Vector2Int.right,
+        Vector2Int.down,
+        Vector2Int.left
+    };
 
-        for (int i = 0; i < positions.Count; i++)
+    public List<CircleGroup> FindAllConnectedGroups(
+        IEnumerable<Vector2Int> positions
+    )
+    {
+        HashSet<Vector2Int> unvisited = new(positions);
+        List<CircleGroup> groups = new();
+
+        int groupIndex = 0;
+
+        while (unvisited.Count > 0)
         {
-            Vector2Int pos = positions[i];
-            grid[pos.x, pos.y] = 1;
+            Vector2Int startPosition = GetFirst(unvisited);
+
+            CircleGroup group = FindGroup(
+                startPosition,
+                unvisited,
+                groupIndex
+            );
+
+            groups.Add(group);
+            groupIndex++;
         }
-        
-        int groupcount = 0;
-        List<Group> groups = new List<Group>();
 
-        while(positions.Count != 0)
+        return groups;
+    }
+
+    public CircleGroup FindConnectedGroupAt(Vector2Int startPosition, Dictionary<Vector2Int, MapTile> tiles, MapTile mapTile)
+    {
+        CircleGroup group = new(mapTile);
+
+        if (mapTile == null)
+            return group;
+
+        Queue<Vector2Int> open = new();
+        HashSet<Vector2Int> visited = new();
+
+        open.Enqueue(startPosition);
+        visited.Add(startPosition);
+
+        while (open.Count > 0)
         {
-            Vector2Int firstElement = positions[0];
+            Vector2Int current = open.Dequeue();
+            group.Coordinates.Add(current);
 
-            Group newGroup = new Group();
-
-            newGroup.localIndex = groupcount;
-            newGroup.TryAddUnique(firstElement);
-
-            WaveFunction(firstElement, grid, ref newGroup);
-
-            foreach (var coordinate in newGroup.coordinates)
+            foreach (Vector2Int direction in Directions)
             {
-                positions.Remove(coordinate);
+                Vector2Int neighbour = current + direction;
+
+                if (visited.Contains(neighbour))
+                    continue;
+
+                if (!tiles.TryGetValue(neighbour, out MapTile neighbourTile))
+                    continue;
+
+                if (neighbourTile.BlockData != mapTile.BlockData)
+                    continue;
+
+                visited.Add(neighbour);
+                open.Enqueue(neighbour);
             }
-
-            groups.Add(newGroup);
-            
-            groupcount ++;
         }
 
+        return group;
+    }
 
-        string result = "";
-        
-        foreach (var group in groups)
+    public HashSet<Vector2Int> FindConnectedPositions(
+        Vector2Int startPosition,
+        HashSet<Vector2Int> allowedPositions
+    )
+    {
+        HashSet<Vector2Int> result = new();
+        Queue<Vector2Int> open = new();
+
+        open.Enqueue(startPosition);
+        result.Add(startPosition);
+
+        while (open.Count > 0)
         {
-            result += $"index: {group.localIndex} size: {group.coordinates.Count.ToString()}";
-            result += "\n";
-        }
+            Vector2Int current = open.Dequeue();
 
-        Debug.Log("\n" + result);
+            foreach (Vector2Int direction in Directions)
+            {
+                Vector2Int neighbour = current + direction;
+
+                if (!allowedPositions.Contains(neighbour))
+                    continue;
+
+                if (!result.Add(neighbour))
+                    continue;
+
+                open.Enqueue(neighbour);
+            }
+        }
 
         return result;
     }
 
-    private void WaveFunction(
-        Vector2Int coordinate,
-        int[,] grid,
-        ref Group newGroup)
+    private CircleGroup FindGroup(
+        Vector2Int startPosition,
+        HashSet<Vector2Int> unvisited,
+        int groupIndex
+    )
     {
-        List<Vector2Int> neighbours = getNeighbourTiles(coordinate, grid).ToList();
+        CircleGroup group = new(groupIndex);
+        Queue<Vector2Int> open = new();
 
-        foreach (Vector2Int neighbour in neighbours)
+        open.Enqueue(startPosition);
+        unvisited.Remove(startPosition);
+
+        while (open.Count > 0)
         {
-            if (!newGroup.TryAddUnique(neighbour))
-            {
-                continue;
-            }
+            Vector2Int current = open.Dequeue();
+            group.Coordinates.Add(current);
 
-            WaveFunction(neighbour, grid, ref newGroup);
+            foreach (Vector2Int direction in Directions)
+            {
+                Vector2Int neighbour = current + direction;
+
+                if (!unvisited.Remove(neighbour))
+                    continue;
+
+                open.Enqueue(neighbour);
+            }
         }
+
+        return group;
     }
 
-    struct Group
+    public static Vector2Int GetFirst(
+        HashSet<Vector2Int> positions
+    )
     {
-        public List<Vector2Int> coordinates;
-        public int localIndex;
+        foreach (Vector2Int position in positions)
+            return position;
 
-        public bool TryAddUnique(Vector2Int vector2Int)
-        {
-            if(coordinates == null) 
-                coordinates = new List<Vector2Int>();
+        throw new System.InvalidOperationException(
+            "Cannot get a position from an empty collection."
+        );
+    }
+}
 
-            if (!coordinates.Contains(vector2Int))
-            {
-                coordinates.Add(vector2Int);
-                return true;
-            }
+public sealed class CircleGroup
+{
+    public int LocalIndex { get; }
+    public List<Vector2Int> Coordinates { get; } = new();
+    public MapTile groupTile;
 
-            return false;
-        }
+    public CircleGroup(int localIndex)
+    {
+        LocalIndex = localIndex;
     }
 
-    public Vector2Int[] getNeighbourTiles(Vector2Int coordinate, int[,] positions)
+    public CircleGroup(MapTile mapTile)
     {
-        Vector2Int[] directions = {Vector2Int.down, Vector2Int.up, Vector2Int.left, Vector2Int.right};
-        
-        int maxX = positions.GetLength(0);
-        int maxY = positions.GetLength(1);
-
-        List<Vector2Int> occupiedPositions = new List<Vector2Int>();
-
-        for (int i = 0; i < directions.Length; i++)
-        {
-            Vector2Int dir = directions[i];
-
-            Vector2Int newDir = coordinate + dir;
-
-            if(newDir.x >= maxX ||  newDir.x < 0 || newDir.y >= maxY || newDir.y < 0)
-                continue;
-
-            if(positions[newDir.x, newDir.y] != 0)
-            {
-                occupiedPositions.Add(newDir);
-            }
-        }
-
-        return occupiedPositions.ToArray();
-    }
-
-
-    private string GridToString(int[,] grid)
-    {
-        int width = grid.GetLength(0);
-        int height = grid.GetLength(1);
-
-        StringBuilder builder = new StringBuilder();
-
-        // Highest Y first, so the grid is not vertically inverted.
-        for (int y = height - 1; y >= 0; y--)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                builder.Append(grid[x, y] == 0 ? '·' : '█');
-            }
-
-            builder.AppendLine();
-        }
-
-        return builder.ToString();
+        this.groupTile = mapTile;
     }
 }

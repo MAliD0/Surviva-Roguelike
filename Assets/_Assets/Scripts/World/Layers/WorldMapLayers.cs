@@ -38,8 +38,8 @@ public class WorldMapLayers
     {
         BaseLayer = new MapLayerLogic(bounds);
         ForeLayer = new MapLayerLogic(bounds);
-        MediumLayer = new MapLayerLogic(bounds);
-        CircleElementLayer = new MapLayerLogic(bounds);
+        MediumLayer = new MapLayerLogic(bounds, MapLayerResolution.Tile);
+        CircleElementLayer = new MapLayerLogic(bounds, MapLayerResolution.Tile);
     }
 
     private void InitGraphics()

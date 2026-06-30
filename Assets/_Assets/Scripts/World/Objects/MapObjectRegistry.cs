@@ -27,6 +27,52 @@ public class MapObjectRegistry
 
     private readonly Func<MapLayerType, MapLayerLogic> getLayer;
 
+    private readonly Dictionary<(MapLayerType layer, Vector2Int tile, Vector2Int subtile), GameObject> runtimeObjects = new();
+
+    public event Action<MapLayerType, Vector2Int, Vector2Int, GameObject> onObjectCreated;
+    public event Action<MapLayerType, Vector2Int, Vector2Int, GameObject> onObjectDestroyed;
+
+    public bool RegisterRuntimeObject(MapLayerType layer, Vector2Int tile, Vector2Int subtile, GameObject gameObject)
+    {
+        if (gameObject == null)
+            return false;
+
+        var key = (layer, tile, subtile);
+
+        if (runtimeObjects.TryGetValue(key, out GameObject existingObject))
+        {
+            if (existingObject == gameObject)
+                return false;
+
+            onObjectDestroyed?.Invoke(layer, tile, subtile, existingObject);
+        }
+
+        runtimeObjects[key] = gameObject;
+        onObjectCreated?.Invoke(layer, tile, subtile, gameObject);
+
+        return true;
+    }
+
+    public bool TryGetRuntimeObject(MapLayerType layer, Vector2Int tile, Vector2Int subtile, out GameObject gameObject)
+    {
+        return runtimeObjects.TryGetValue((layer, tile, subtile), out gameObject);
+    }
+
+    public bool RemoveRuntimeObject(MapLayerType layer, Vector2Int tile, Vector2Int subtile)
+    {
+        var key = (layer, tile, subtile);
+
+        if (!runtimeObjects.TryGetValue(key, out GameObject gameObject))
+            return false;
+
+        runtimeObjects.Remove(key);
+        onObjectDestroyed?.Invoke(layer, tile, subtile, gameObject);
+
+        return true;
+    }
+
+
+
     public MapObjectRegistry(Func<MapLayerType, MapLayerLogic> getLayer)
     {
         this.getLayer = getLayer;
@@ -39,11 +85,18 @@ public class MapObjectRegistry
 
     public void Clear()
     {
+        foreach (var pair in runtimeObjects)
+        {
+            var key = pair.Key;
+            onObjectDestroyed?.Invoke(key.layer, key.tile, key.subtile, pair.Value);
+        }
+
+        runtimeObjects.Clear();
         anchorToNetId.Clear();
         anchorToNetlessId.Clear();
         netlessRegistry.Clear();
     }
-
+    
     public void RegisterNetworkObject(
         MapLayerType layer,
         Dictionary<Vector2Int, HashSet<Vector2Int>> cells,

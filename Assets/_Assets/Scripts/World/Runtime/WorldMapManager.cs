@@ -52,6 +52,22 @@ public class WorldMapManager : NetworkBehaviour
     public MapBlockDataLibrary BlockLibrary => blockLibrary;
     public WorldMapNetworkSync NetworkSync => networkSync;
     
+    public event Action<MapLayerType, Vector2Int, Vector2Int, GameObject> onObjectCreated
+    {
+        add => mapObjectRegistry.onObjectCreated += value;
+        remove => mapObjectRegistry.onObjectCreated -= value;
+    }
+
+    public event Action<MapLayerType, Vector2Int, Vector2Int, GameObject> onObjectDestroyed
+    {
+        add => mapObjectRegistry.onObjectDestroyed += value;
+        remove => mapObjectRegistry.onObjectDestroyed -= value;
+    }
+
+    public bool TryGetRuntimeObject(MapLayerType layer, Vector2Int tile, Vector2Int subtile, out GameObject gameObject)
+    {
+        return mapObjectRegistry.TryGetRuntimeObject(layer, tile, subtile, out gameObject);
+    }
     
     public Dictionary<string, MapObjectRegistry.NetlessEntry> GetNetlessRegistry()
     {
@@ -87,10 +103,7 @@ public class WorldMapManager : NetworkBehaviour
     private void Awake()
     {
         Instance = this;
-    }
 
-    private void Start()
-    {
         InitLayers();
 
         InitObjectRegistry();
@@ -101,6 +114,10 @@ public class WorldMapManager : NetworkBehaviour
         InitLayerEventRouter();
         InitNetworkSync();
         InitWorldLootService();
+    }
+
+    private void Start()
+    {
         
         if (runMode == WorldMapRunMode.Offline)
         {
